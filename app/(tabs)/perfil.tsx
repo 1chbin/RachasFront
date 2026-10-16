@@ -1,19 +1,22 @@
 import { useCallback, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
+import { GroupedSection } from '@/components/ui/GroupedSection';
+import { ListRow } from '@/components/ui/ListRow';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingView } from '@/components/ui/LoadingView';
 import { Screen } from '@/components/ui/Screen';
+import { TextField } from '@/components/ui/TextField';
 import { useSession } from '@/context/SessionContext';
 import { mensajeErrorAmigable } from '@/lib/errors';
 import { listarDesafiosDeUsuario } from '@/services/api/desafios';
 import { actualizarUsuario } from '@/services/api/usuarios';
 import { obtenerRanking } from '@/services/api/ranking';
 import { lightColors } from '@/theme/light';
+import { radius, spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 import type { DesafioResumen } from '@/types/api';
-import { Pressable } from 'react-native';
 
 export default function PerfilScreen() {
   const { usuario, usuarioId, refrescarUsuario, cerrarSesion } = useSession();
@@ -25,6 +28,8 @@ export default function PerfilScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+
+  const inicial = usuario?.alias?.charAt(0).toUpperCase() ?? '?';
 
   const cargar = useCallback(async () => {
     if (!usuarioId) return;
@@ -84,37 +89,50 @@ export default function PerfilScreen() {
   if (loading) return <LoadingView />;
 
   return (
-    <Screen>
-      <Text style={styles.title}>Perfil</Text>
+    <Screen title="Perfil">
       {error ? <ErrorState message={error} onRetry={cargar} /> : null}
-      <Text style={styles.label}>@{usuario?.alias}</Text>
-      <TextInput style={styles.input} value={nombre} onChangeText={setNombre} />
-      <TextInput
-        style={styles.input}
-        value={zonaHoraria}
-        onChangeText={setZonaHoraria}
-        placeholder="Zona horaria IANA"
-      />
+
+      <View style={styles.avatarWrap}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{inicial}</Text>
+        </View>
+        <Text style={styles.alias}>@{usuario?.alias}</Text>
+      </View>
+
+      <GroupedSection title="Tu cuenta">
+        <TextField grouped value={nombre} onChangeText={setNombre} placeholder="Nombre" />
+        <View style={styles.divider} />
+        <TextField
+          grouped
+          value={zonaHoraria}
+          onChangeText={setZonaHoraria}
+          placeholder="Zona horaria IANA"
+        />
+      </GroupedSection>
+
       <PrimaryButton
         label="Guardar cambios"
         onPress={guardar}
         disabled={guardando}
       />
 
-      <Text style={styles.section}>Desafíos finalizados</Text>
-      {finalizados.length === 0 ? (
-        <Text style={styles.empty}>Todavía no tenés desafíos finalizados.</Text>
-      ) : (
-        finalizados.map(({ desafio, resultado }) => (
-          <Pressable
-            key={desafio.id}
-            style={styles.card}
-            onPress={() => router.push(`/desafio/${desafio.id}`)}>
-            <Text style={styles.cardTitle}>{desafio.nombre}</Text>
-            <Text style={styles.cardMeta}>{resultado}</Text>
-          </Pressable>
-        ))
-      )}
+      <GroupedSection title="Desafíos finalizados">
+        {finalizados.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <Text style={styles.empty}>Todavía no tenés desafíos finalizados.</Text>
+          </View>
+        ) : (
+          finalizados.map(({ desafio, resultado }, index) => (
+            <ListRow
+              key={desafio.id}
+              title={desafio.nombre}
+              subtitle={resultado}
+              onPress={() => router.push(`/desafio/${desafio.id}`)}
+              isLast={index === finalizados.length - 1}
+            />
+          ))
+        )}
+      </GroupedSection>
 
       <PrimaryButton label="Cerrar sesión" variant="danger" onPress={salir} />
     </Screen>
@@ -122,51 +140,40 @@ export default function PerfilScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: {
-    ...typography.largeTitle,
-    color: lightColors.label,
+  avatarWrap: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: lightColors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: 28,
     fontFamily: 'Inter_700Bold',
-    marginBottom: 8,
+    color: lightColors.primaryDark,
   },
-  label: {
+  alias: {
     ...typography.subhead,
-    color: lightColors.labelSecondary,
-    marginBottom: 12,
-    fontFamily: 'Inter_400Regular',
-  },
-  input: {
-    backgroundColor: lightColors.surface,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    fontFamily: 'Inter_400Regular',
-  },
-  section: {
-    ...typography.headline,
-    marginTop: 20,
-    marginBottom: 8,
-    color: lightColors.label,
     fontFamily: 'Inter_600SemiBold',
+    color: lightColors.labelSecondary,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: lightColors.separator,
+    marginLeft: spacing.lg,
+  },
+  emptyWrap: {
+    padding: spacing.lg,
   },
   empty: {
     ...typography.body,
     color: lightColors.labelSecondary,
-    fontFamily: 'Inter_400Regular',
-  },
-  card: {
-    backgroundColor: lightColors.surface,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
-  },
-  cardTitle: {
-    ...typography.headline,
-    fontFamily: 'Inter_600SemiBold',
-    color: lightColors.label,
-  },
-  cardMeta: {
-    ...typography.footnote,
-    color: lightColors.primaryDark,
-    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
   },
 });

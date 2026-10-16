@@ -12,6 +12,9 @@ export const lightColors = {
   success: '#34C759',
   danger: '#FF3B30',
   muted: '#8E8E93',
+  tabBarBorder: 'rgba(60, 60, 67, 0.29)',
+  heroGradientStart: '#E8E0FF',
+  heroGradientEnd: '#F2F2F7',
 };
 
 export const estadoBadgeColors: Record<string, string> = {

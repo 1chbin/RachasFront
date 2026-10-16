@@ -9,15 +9,17 @@ export function useResumenInicio(usuarioId: string | null) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const cargar = useCallback(async () => {
-    if (!usuarioId) return;
+  const cargar = useCallback(async (): Promise<ResumenInicioItem[]> => {
+    if (!usuarioId) return [];
     setLoading(true);
     setError(null);
     try {
       const data = await obtenerResumenInicio(usuarioId);
       setItems(data.desafios);
+      return data.desafios;
     } catch (err) {
       setError(mensajeErrorAmigable(err));
+      return [];
     } finally {
       setLoading(false);
     }

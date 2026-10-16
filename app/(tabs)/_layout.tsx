@@ -1,23 +1,44 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Platform, StyleSheet } from 'react-native';
 import { lightColors } from '@/theme/light';
+
+type TabIconProps = {
+  focused: boolean;
+  color: string;
+  size: number;
+  active: keyof typeof Ionicons.glyphMap;
+  inactive: keyof typeof Ionicons.glyphMap;
+};
+
+function TabIcon({ focused, color, size, active, inactive }: TabIconProps) {
+  return (
+    <Ionicons name={focused ? active : inactive} color={String(color)} size={size} />
+  );
+}
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
+        headerShown: false,
         tabBarActiveTintColor: lightColors.primary,
         tabBarInactiveTintColor: lightColors.muted,
-        headerStyle: { backgroundColor: lightColors.background },
-        headerTitleStyle: { fontFamily: 'Inter_700Bold' },
-        tabBarStyle: { backgroundColor: lightColors.surface },
+        tabBarLabelStyle: styles.tabLabel,
+        tabBarStyle: styles.tabBar,
       }}>
       <Tabs.Screen
         name="inicio"
         options={{
           title: 'Inicio',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" color={String(color)} size={size} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <TabIcon
+              focused={focused}
+              color={String(color)}
+              size={size}
+              active="home"
+              inactive="home-outline"
+            />
           ),
         }}
       />
@@ -25,8 +46,14 @@ export default function TabLayout() {
         name="explorar"
         options={{
           title: 'Explorar',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="search-outline" color={String(color)} size={size} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <TabIcon
+              focused={focused}
+              color={String(color)}
+              size={size}
+              active="search"
+              inactive="search-outline"
+            />
           ),
         }}
       />
@@ -34,8 +61,14 @@ export default function TabLayout() {
         name="crear"
         options={{
           title: 'Crear',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="add-circle-outline" color={String(color)} size={size} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <TabIcon
+              focused={focused}
+              color={String(color)}
+              size={size}
+              active="add-circle"
+              inactive="add-circle-outline"
+            />
           ),
         }}
       />
@@ -43,11 +76,32 @@ export default function TabLayout() {
         name="perfil"
         options={{
           title: 'Perfil',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" color={String(color)} size={size} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <TabIcon
+              focused={focused}
+              color={String(color)}
+              size={size}
+              active="person"
+              inactive="person-outline"
+            />
           ),
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBar: {
+    backgroundColor: lightColors.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: lightColors.tabBarBorder,
+    paddingTop: 4,
+    height: Platform.OS === 'ios' ? 88 : 64,
+  },
+  tabLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    marginTop: 2,
+  },
+});

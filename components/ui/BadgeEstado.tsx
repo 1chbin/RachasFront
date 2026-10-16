@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { estadoBadgeColors, lightColors } from '@/theme/light';
+import { radius } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
 type BadgeEstadoProps = {
@@ -21,18 +22,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.sm,
     gap: 6,
   },
   dot: {
-    width: 8,
-    height: 8,
+    width: 7,
+    height: 7,
     borderRadius: 4,
   },
   text: {
     ...typography.footnote,
-    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
   },
 });

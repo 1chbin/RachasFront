@@ -1,14 +1,20 @@
-import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
+import { DateRangeCalendar } from '@/components/crear/DateRangeCalendar';
+import { CategoriaIcon } from '@/components/desafio/CategoriaIcon';
+import { GroupedSection } from '@/components/ui/GroupedSection';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { Screen } from '@/components/ui/Screen';
+import { SelectField } from '@/components/ui/SelectField';
+import { TextField } from '@/components/ui/TextField';
+import { CATEGORIAS_ORDEN, metaCategoria } from '@/lib/categorias';
 import { mensajeErrorAmigable } from '@/lib/errors';
-import { sumarDias, hoyCalendario } from '@/lib/fechas';
+import { sumarDias, hoyCalendario, validarRangoDesafio } from '@/lib/fechas';
 import { crearDesafio } from '@/services/api/desafios';
 import { useSession } from '@/context/SessionContext';
 import { lightColors } from '@/theme/light';
-import { typography } from '@/theme/typography';
+import { spacing } from '@/theme/spacing';
 import type { CategoriaDesafio } from '@/types/api';
 
 export default function CrearScreen() {
@@ -18,11 +24,24 @@ export default function CrearScreen() {
   const [descripcion, setDescripcion] = useState('');
   const [categoria, setCategoria] = useState<CategoriaDesafio>('SALUD');
   const [fechaInicio, setFechaInicio] = useState(hoy);
-  const [fechaFin, setFechaFin] = useState(sumarDias(hoy, 7));
+  const [fechaFin, setFechaFin] = useState(sumarDias(hoy, 6));
   const [maxParticipantes, setMaxParticipantes] = useState('10');
   const [guardando, setGuardando] = useState(false);
 
+  const rangoValido = validarRangoDesafio(fechaInicio, fechaFin, hoy).valido;
+
+  const categoriaOptions = useMemo(
+    () =>
+      CATEGORIAS_ORDEN.map((c) => ({
+        value: c,
+        label: metaCategoria(c).label,
+        left: <CategoriaIcon categoria={c} size="sm" />,
+      })),
+    [],
+  );
+
   const guardar = async () => {
+    if (!rangoValido) return;
     setGuardando(true);
     try {
       const desafio = await crearDesafio({
@@ -42,51 +61,55 @@ export default function CrearScreen() {
   };
 
   return (
-    <Screen>
-      <Text style={styles.title}>Nuevo desafío</Text>
+    <Screen title="Nuevo desafío">
       <View style={styles.form}>
-        <TextInput
-          style={styles.input}
-          placeholder="Nombre (3-60)"
-          value={nombre}
-          onChangeText={setNombre}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Descripción (opcional)"
-          value={descripcion}
-          onChangeText={setDescripcion}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Categoría (SALUD, ESTUDIO...)"
-          value={categoria}
-          onChangeText={(text) => setCategoria(text as CategoriaDesafio)}
-          autoCapitalize="characters"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Fecha inicio YYYY-MM-DD"
-          value={fechaInicio}
-          onChangeText={setFechaInicio}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Fecha fin YYYY-MM-DD"
-          value={fechaFin}
-          onChangeText={setFechaFin}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Máx. participantes (2-20)"
-          keyboardType="number-pad"
-          value={maxParticipantes}
-          onChangeText={setMaxParticipantes}
-        />
+        <GroupedSection title="Información">
+          <TextField grouped placeholder="Nombre (3-60)" value={nombre} onChangeText={setNombre} />
+          <View style={styles.divider} />
+          <TextField
+            grouped
+            placeholder="Descripción (opcional)"
+            value={descripcion}
+            onChangeText={setDescripcion}
+          />
+        </GroupedSection>
+
+        <GroupedSection title="Categoría">
+          <SelectField
+            label="Elegí una categoría"
+            value={categoria}
+            options={categoriaOptions}
+            onChange={(value) => {
+              if (value) setCategoria(value);
+            }}
+            isLast
+          />
+        </GroupedSection>
+
+        <GroupedSection title="Fechas y cupo">
+          <DateRangeCalendar
+            hoyMinimo={hoy}
+            fechaInicio={fechaInicio}
+            fechaFin={fechaFin}
+            onChange={({ fechaInicio: inicio, fechaFin: fin }) => {
+              setFechaInicio(inicio);
+              setFechaFin(fin);
+            }}
+          />
+          <View style={styles.divider} />
+          <TextField
+            grouped
+            placeholder="Máx. participantes (2-20)"
+            keyboardType="number-pad"
+            value={maxParticipantes}
+            onChangeText={setMaxParticipantes}
+          />
+        </GroupedSection>
+
         <PrimaryButton
           label="Crear desafío"
           onPress={guardar}
-          disabled={guardando || nombre.length < 3}
+          disabled={guardando || nombre.length < 3 || !rangoValido}
         />
       </View>
     </Screen>
@@ -94,17 +117,12 @@ export default function CrearScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: {
-    ...typography.largeTitle,
-    color: lightColors.label,
-    marginBottom: 16,
-    fontFamily: 'Inter_700Bold',
+  form: {
+    gap: spacing.md,
   },
-  form: { gap: 12 },
-  input: {
-    backgroundColor: lightColors.surface,
-    borderRadius: 12,
-    padding: 14,
-    fontFamily: 'Inter_400Regular',
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: lightColors.separator,
+    marginLeft: spacing.lg,
   },
 });

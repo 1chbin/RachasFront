@@ -1,20 +1,26 @@
 import { useCallback, useState } from 'react';
 import {
+  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { CategoriaIcon } from '@/components/desafio/CategoriaIcon';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 import { BadgeEstado } from '@/components/ui/BadgeEstado';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { LoadingView } from '@/components/ui/LoadingView';
+import { GroupedSection } from '@/components/ui/GroupedSection';
+import { ListRow } from '@/components/ui/ListRow';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { Screen } from '@/components/ui/Screen';
+import { TextField } from '@/components/ui/TextField';
+import { StreakBurst } from '@/components/streak/StreakBurst';
 import { useSession } from '@/context/SessionContext';
-import { hoyCalendario } from '@/lib/fechas';
+import { metaCategoria } from '@/lib/categorias';
+import { hoyCalendario, textoTiempoDesafio } from '@/lib/fechas';
 import { mensajeErrorAmigable } from '@/lib/errors';
 import {
   abandonarDesafio,
@@ -29,6 +35,7 @@ import {
 } from '@/services/api/checkIns';
 import { obtenerRanking, obtenerRacha } from '@/services/api/ranking';
 import { lightColors } from '@/theme/light';
+import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 import type { CheckIn, DesafioResumen, FilaRanking } from '@/types/api';
 
@@ -44,37 +51,55 @@ export default function DesafioDetalleScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mutando, setMutando] = useState(false);
+  const [burst, setBurst] = useState({
+    visible: false,
+    from: 0,
+    to: 0,
+  });
+  const [sheetOpen, setSheetOpen] = useState(true);
 
-  const cargar = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const [d, r, ra, historial] = await Promise.all([
-        obtenerDesafio(id),
-        obtenerRanking(id).catch(() => ({ ranking: [] as FilaRanking[] })),
-        obtenerRacha(id).catch(() => ({ rachaActual: 0, mejorRacha: 0 })),
-        usuarioId
-          ? listarCheckIns(id, usuarioId, 1, 20).catch(() => ({
-              data: [] as CheckIn[],
-            }))
-          : Promise.resolve({ data: [] as CheckIn[] }),
-      ]);
-      setDesafio(d);
-      setRanking(r.ranking ?? []);
-      setRacha(ra);
-      setCheckIns(historial.data ?? []);
-      await listarParticipantes(id).catch(() => undefined);
-    } catch (err) {
-      setError(mensajeErrorAmigable(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [id, usuarioId]);
+  const cerrarSheet = () => {
+    setSheetOpen(false);
+  };
+
+  const onSheetClosed = () => {
+    router.back();
+  };
+
+  const cargar = useCallback(
+    async (silencioso = false) => {
+      if (!id) return;
+      if (!silencioso) setLoading(true);
+      setError(null);
+      try {
+        const [d, r, ra, historial] = await Promise.all([
+          obtenerDesafio(id),
+          obtenerRanking(id).catch(() => ({ ranking: [] as FilaRanking[] })),
+          obtenerRacha(id).catch(() => ({ rachaActual: 0, mejorRacha: 0 })),
+          usuarioId
+            ? listarCheckIns(id, usuarioId, 1, 20).catch(() => ({
+                data: [] as CheckIn[],
+              }))
+            : Promise.resolve({ data: [] as CheckIn[] }),
+        ]);
+        setDesafio(d);
+        setRanking(r.ranking ?? []);
+        setRacha(ra);
+        setCheckIns(historial.data ?? []);
+        await listarParticipantes(id).catch(() => undefined);
+      } catch (err) {
+        setError(mensajeErrorAmigable(err));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [id, usuarioId],
+  );
 
   useFocusEffect(
     useCallback(() => {
-      cargar();
+      setSheetOpen(true);
+      cargar(false);
     }, [cargar]),
   );
 
@@ -85,8 +110,13 @@ export default function DesafioDetalleScreen() {
     }
   };
 
+  const cerrarBurst = useCallback(() => {
+    setBurst((prev) => ({ ...prev, visible: false }));
+  }, []);
+
   const checkInHoy = async () => {
     if (!id || !usuario) return;
+    const antes = racha.rachaActual;
     setMutando(true);
     try {
       await registrarCheckIn(id, {
@@ -96,7 +126,12 @@ export default function DesafioDetalleScreen() {
       });
       setNota('');
       setValor('');
-      await cargar();
+      const ra = await obtenerRacha(id).catch(() => ({ rachaActual: antes, mejorRacha: 0 }));
+      setRacha(ra);
+      await cargar(true);
+      if (ra.rachaActual > antes) {
+        setBurst({ visible: true, from: antes, to: ra.rachaActual });
+      }
     } catch (err) {
       alert(mensajeErrorAmigable(err));
     } finally {
@@ -109,7 +144,7 @@ export default function DesafioDetalleScreen() {
     setMutando(true);
     try {
       await deshacerUltimoCheckIn(id);
-      await cargar();
+      await cargar(true);
     } catch (err) {
       alert(mensajeErrorAmigable(err));
     } finally {
@@ -122,7 +157,7 @@ export default function DesafioDetalleScreen() {
     setMutando(true);
     try {
       await abandonarDesafio(id);
-      await cargar();
+      await cargar(true);
     } catch (err) {
       alert(mensajeErrorAmigable(err));
     } finally {
@@ -135,7 +170,7 @@ export default function DesafioDetalleScreen() {
     setMutando(true);
     try {
       await cancelarDesafio(id);
-      await cargar();
+      await cargar(true);
     } catch (err) {
       alert(mensajeErrorAmigable(err));
     } finally {
@@ -143,206 +178,264 @@ export default function DesafioDetalleScreen() {
     }
   };
 
-  if (loading) return <LoadingView />;
-  if (error || !desafio) {
-    return (
-      <Screen>
-        <ErrorState message={error ?? 'Desafío no encontrado'} onRetry={cargar} />
-      </Screen>
-    );
-  }
+  const hoy = hoyCalendario(
+    usuario?.zonaHoraria ?? 'America/Argentina/Buenos_Aires',
+  );
 
-  const esCreador = desafio.creadorId === usuarioId;
+  const sheetHeader = (() => {
+    if (loading && !desafio) {
+      return (
+        <View style={styles.sheetHeader}>
+          <View style={styles.sheetTitleRow}>
+            <Text style={styles.sheetTitle}>Desafío</Text>
+            <Pressable
+              onPress={cerrarSheet}
+              accessibilityRole="button"
+              accessibilityLabel="Cerrar"
+              hitSlop={8}
+              style={styles.closeBtn}>
+              <Ionicons name="close" size={26} color={lightColors.muted} />
+            </Pressable>
+          </View>
+        </View>
+      );
+    }
+
+    if (error || !desafio) {
+      return (
+        <View style={styles.sheetHeader}>
+          <View style={styles.sheetTitleRow}>
+            <Text style={styles.sheetTitle}>Desafío</Text>
+            <Pressable
+              onPress={cerrarSheet}
+              accessibilityRole="button"
+              accessibilityLabel="Cerrar"
+              hitSlop={8}
+              style={styles.closeBtn}>
+              <Ionicons name="close" size={26} color={lightColors.muted} />
+            </Pressable>
+          </View>
+        </View>
+      );
+    }
+
+    const meta = metaCategoria(desafio.categoria);
+    const tiempo = textoTiempoDesafio(
+      desafio.estado,
+      desafio.fechaInicio,
+      desafio.fechaFin,
+      hoy,
+    );
+
+    return (
+      <View style={styles.sheetHeader}>
+        <View style={styles.sheetTitleRow}>
+          <CategoriaIcon categoria={desafio.categoria} align="start" />
+          <Text style={styles.sheetTitle} numberOfLines={2}>
+            {desafio.nombre}
+          </Text>
+          <Pressable
+            onPress={cerrarSheet}
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar"
+            hitSlop={8}
+            style={styles.closeBtn}>
+            <Ionicons name="close" size={26} color={lightColors.muted} />
+          </Pressable>
+        </View>
+        <View style={styles.headerMeta}>
+          <BadgeEstado estado={desafio.estado} />
+          <Text style={styles.meta}>
+            {meta.label} · {tiempo}
+          </Text>
+        </View>
+      </View>
+    );
+  })();
+
+  const sheetBody = (() => {
+    if (loading && !desafio) {
+      return (
+        <View style={styles.loadingBody}>
+          <ActivityIndicator size="large" color={lightColors.primary} />
+        </View>
+      );
+    }
+
+    if (error || !desafio) {
+      return <ErrorState message={error ?? 'Desafío no encontrado'} onRetry={() => cargar(false)} />;
+    }
+
+    const esCreador = desafio.creadorId === usuarioId;
+
+    return (
+      <>
+        {desafio.codigoInvitacion ? (
+          <GroupedSection title="Invitación">
+            <ListRow
+              title="Código para invitar"
+              detail={desafio.codigoInvitacion}
+              onPress={copiarCodigo}
+              isLast
+            />
+          </GroupedSection>
+        ) : null}
+
+        <GroupedSection title="Tu racha">
+          <ListRow
+            title={`${racha.rachaActual} días`}
+            subtitle={`Mejor racha: ${racha.mejorRacha} días`}
+            isLast
+          />
+        </GroupedSection>
+
+        {desafio.estado === 'ACTIVO' ? (
+          <GroupedSection title="Check-in de hoy">
+            <TextField grouped placeholder="Nota (opcional)" value={nota} onChangeText={setNota} />
+            <View style={styles.divider} />
+            <TextField
+              grouped
+              placeholder="Valor numérico (opcional)"
+              value={valor}
+              onChangeText={setValor}
+              keyboardType="numeric"
+            />
+          </GroupedSection>
+        ) : null}
+
+        {desafio.estado === 'ACTIVO' ? (
+          <View style={styles.actions}>
+            <PrimaryButton
+              label="Registrar check-in de hoy"
+              onPress={checkInHoy}
+              disabled={mutando}
+            />
+            <PrimaryButton
+              label="Deshacer último (hoy)"
+              variant="secondary"
+              onPress={deshacer}
+              disabled={mutando}
+            />
+          </View>
+        ) : null}
+
+        <GroupedSection title="Ranking">
+          {ranking.length === 0 ? (
+            <View style={styles.emptyWrap}>
+              <Text style={styles.empty}>Sin datos de ranking todavía.</Text>
+            </View>
+          ) : (
+            ranking.map((fila, index) => (
+              <ListRow
+                key={fila.usuarioId}
+                title={`@${fila.alias}`}
+                subtitle={`Racha ${fila.rachaActual}`}
+                detail={`${fila.puntosTotales} pts`}
+                highlight={fila.usuarioId === usuarioId}
+                isLast={index === ranking.length - 1}
+              />
+            ))
+          )}
+        </GroupedSection>
+
+        <GroupedSection title="Historial">
+          {checkIns.length === 0 ? (
+            <View style={styles.emptyWrap}>
+              <Text style={styles.empty}>Sin check-ins todavía.</Text>
+            </View>
+          ) : (
+            checkIns.map((item, index) => (
+              <ListRow
+                key={item.id}
+                title={item.dia}
+                detail={`+${item.puntos} pts`}
+                isLast={index === checkIns.length - 1}
+              />
+            ))
+          )}
+        </GroupedSection>
+
+        {!esCreador ? (
+          <PrimaryButton
+            label="Abandonar desafío"
+            variant="danger"
+            onPress={abandonar}
+            disabled={mutando}
+          />
+        ) : (
+          <PrimaryButton
+            label="Cancelar desafío"
+            variant="danger"
+            onPress={cancelar}
+            disabled={mutando}
+          />
+        )}
+      </>
+    );
+  })();
 
   return (
-    <Screen>
-      <Text style={styles.title}>{desafio.nombre}</Text>
-      <BadgeEstado estado={desafio.estado} />
-      <Text style={styles.meta}>
-        {desafio.categoria} · {desafio.fechaInicio} → {desafio.fechaFin}
-      </Text>
-      {desafio.codigoInvitacion ? (
-        <Pressable onPress={copiarCodigo} style={styles.codeBox}>
-          <Text style={styles.codeLabel}>Código para invitar</Text>
-          <Text style={styles.code}>{desafio.codigoInvitacion}</Text>
-        </Pressable>
-      ) : null}
+    <>
+      <BottomSheet
+        visible={sheetOpen}
+        onClose={onSheetClosed}
+        size="tall"
+        header={sheetHeader}>
+        {sheetBody}
+      </BottomSheet>
 
-      <Text style={styles.section}>Tu racha</Text>
-      <Text style={styles.racha}>
-        {racha.rachaActual} días (mejor: {racha.mejorRacha})
-      </Text>
-
-      {desafio.estado === 'ACTIVO' ? (
-        <View style={styles.block}>
-          <TextInput
-            style={styles.input}
-            placeholder="Nota (opcional)"
-            value={nota}
-            onChangeText={setNota}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Valor numérico (opcional)"
-            value={valor}
-            onChangeText={setValor}
-            keyboardType="numeric"
-          />
-          <PrimaryButton
-            label="Registrar check-in de hoy"
-            onPress={checkInHoy}
-            disabled={mutando}
-          />
-          <PrimaryButton
-            label="Deshacer último (hoy)"
-            variant="secondary"
-            onPress={deshacer}
-            disabled={mutando}
-          />
-        </View>
-      ) : null}
-
-      <Text style={styles.section}>Ranking</Text>
-      {ranking.length === 0 ? (
-        <Text style={styles.empty}>Sin datos de ranking todavía.</Text>
-      ) : (
-        ranking.map((fila) => (
-          <View
-            key={fila.usuarioId}
-            style={[
-              styles.rankRow,
-              fila.usuarioId === usuarioId && styles.rankRowSelf,
-            ]}>
-            <Text style={styles.rankPos}>#{fila.posicion}</Text>
-            <Text style={styles.rankAlias}>@{fila.alias}</Text>
-            <Text style={styles.rankPts}>
-              {fila.puntosTotales} pts · racha {fila.rachaActual}
-            </Text>
-          </View>
-        ))
-      )}
-
-      <Text style={styles.section}>Historial</Text>
-      {checkIns.map((item) => (
-        <View key={item.id} style={styles.historyRow}>
-          <Text style={styles.historyDay}>{item.dia}</Text>
-          <Text style={styles.historyPts}>+{item.puntos} pts</Text>
-        </View>
-      ))}
-
-      {!esCreador ? (
-        <PrimaryButton
-          label="Abandonar desafío"
-          variant="danger"
-          onPress={abandonar}
-          disabled={mutando}
-        />
-      ) : (
-        <PrimaryButton
-          label="Cancelar desafío"
-          variant="danger"
-          onPress={cancelar}
-          disabled={mutando}
-        />
-      )}
-    </Screen>
+      <StreakBurst
+        visible={burst.visible}
+        from={burst.from}
+        to={burst.to}
+        onComplete={cerrarBurst}
+      />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  title: {
+  sheetHeader: {
+    gap: spacing.sm,
+  },
+  sheetTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  sheetTitle: {
     ...typography.title2,
-    color: lightColors.label,
     fontFamily: 'Inter_700Bold',
-    marginBottom: 8,
+    flex: 1,
+  },
+  closeBtn: {
+    padding: spacing.xs,
+  },
+  headerMeta: {
+    gap: spacing.sm,
+    paddingLeft: spacing.xs,
   },
   meta: {
     ...typography.subhead,
-    color: lightColors.labelSecondary,
-    marginBottom: 12,
-    fontFamily: 'Inter_400Regular',
   },
-  codeBox: {
-    backgroundColor: lightColors.primarySoft,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
+  loadingBody: {
+    paddingVertical: spacing.xxl,
+    alignItems: 'center',
   },
-  codeLabel: {
-    ...typography.footnote,
-    color: lightColors.primaryDark,
-    fontFamily: 'Inter_600SemiBold',
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: lightColors.separator,
+    marginLeft: spacing.lg,
   },
-  code: {
-    ...typography.title2,
-    color: lightColors.primary,
-    fontFamily: 'Inter_700Bold',
-    letterSpacing: 4,
+  actions: {
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-  section: {
-    ...typography.headline,
-    marginTop: 16,
-    marginBottom: 8,
-    color: lightColors.label,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  racha: {
-    ...typography.body,
-    color: lightColors.streak,
-    fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
-  },
-  block: { gap: 8, marginBottom: 8 },
-  input: {
-    backgroundColor: lightColors.surface,
-    borderRadius: 12,
-    padding: 12,
-    fontFamily: 'Inter_400Regular',
-  },
-  rankRow: {
-    backgroundColor: lightColors.surface,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 6,
-  },
-  rankRowSelf: {
-    borderWidth: 2,
-    borderColor: lightColors.primary,
-  },
-  rankPos: {
-    ...typography.footnote,
-    color: lightColors.muted,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  rankAlias: {
-    ...typography.headline,
-    color: lightColors.label,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  rankPts: {
-    ...typography.footnote,
-    color: lightColors.labelSecondary,
-    fontFamily: 'Inter_400Regular',
-  },
-  historyRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: lightColors.separator,
-  },
-  historyDay: {
-    ...typography.body,
-    fontFamily: 'Inter_400Regular',
-  },
-  historyPts: {
-    ...typography.body,
-    color: lightColors.success,
-    fontFamily: 'Inter_600SemiBold',
+  emptyWrap: {
+    padding: spacing.lg,
   },
   empty: {
     ...typography.footnote,
-    color: lightColors.labelSecondary,
-    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
   },
 });

@@ -1,47 +1,51 @@
 import { useCallback, useState } from 'react';
 import {
   FlatList,
-  Modal,
-  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
-import { BadgeEstado } from '@/components/ui/BadgeEstado';
+import { DesafioListRow } from '@/components/desafio/DesafioListRow';
+import { CategoriaIcon } from '@/components/desafio/CategoriaIcon';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { GroupedSection, SectionTitle } from '@/components/ui/GroupedSection';
+import { ListRow } from '@/components/ui/ListRow';
 import { LoadingView } from '@/components/ui/LoadingView';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { SelectField } from '@/components/ui/SelectField';
+import { TextField } from '@/components/ui/TextField';
+import { useSession } from '@/context/SessionContext';
+import {
+  CATEGORIAS_ORDEN,
+  ESTADOS_ORDEN,
+  etiquetaEstado,
+  metaCategoria,
+} from '@/lib/categorias';
+import { hoyCalendario } from '@/lib/fechas';
 import { mensajeErrorAmigable } from '@/lib/errors';
 import { listarDesafios, unirseDesafio } from '@/services/api/desafios';
 import { lightColors } from '@/theme/light';
+import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 import type { CategoriaDesafio, DesafioResumen, EstadoDesafio } from '@/types/api';
 
-const categorias: CategoriaDesafio[] = [
-  'SALUD',
-  'ESTUDIO',
-  'FINANZAS',
-  'BIENESTAR',
-  'OTRO',
-];
-const estados: EstadoDesafio[] = [
-  'PROGRAMADO',
-  'ACTIVO',
-  'FINALIZADO',
-  'CANCELADO',
-];
-
 export default function ExplorarScreen() {
+  const { usuario } = useSession();
+  const hoy = hoyCalendario(
+    usuario?.zonaHoraria ?? 'America/Argentina/Buenos_Aires',
+  );
   const [items, setItems] = useState<DesafioResumen[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [estado, setEstado] = useState<EstadoDesafio | ''>('');
   const [categoria, setCategoria] = useState<CategoriaDesafio | ''>('');
-  const [modalVisible, setModalVisible] = useState(false);
+  const [modalCodigo, setModalCodigo] = useState(false);
   const [codigo, setCodigo] = useState('');
   const [uniendo, setUniendo] = useState(false);
 
@@ -73,7 +77,7 @@ export default function ExplorarScreen() {
     setUniendo(true);
     try {
       const res = await unirseDesafio(codigo.trim().toUpperCase());
-      setModalVisible(false);
+      setModalCodigo(false);
       setCodigo('');
       router.push(`/desafio/${res.desafio.id}`);
     } catch (err) {
@@ -83,157 +87,147 @@ export default function ExplorarScreen() {
     }
   };
 
-  if (loading) return <LoadingView />;
+  const estadoOptions = [
+    { value: '' as const, label: 'Todos' },
+    ...ESTADOS_ORDEN.map((e) => ({ value: e, label: etiquetaEstado(e) })),
+  ];
+
+  const categoriaOptions = [
+    { value: '' as CategoriaDesafio | '', label: 'Todas' },
+    ...CATEGORIAS_ORDEN.map((c) => ({
+      value: c,
+      label: metaCategoria(c).label,
+      left: <CategoriaIcon categoria={c} size="sm" />,
+    })),
+  ];
+
+  if (loading && items.length === 0) return <LoadingView />;
+
+  const header = (
+    <View style={styles.header}>
+      <ScreenHeader title="Explorar" />
+      <GroupedSection title="Filtros">
+        <SelectField
+          label="Estado"
+          value={estado}
+          options={estadoOptions}
+          onChange={setEstado}
+          isLast={false}
+        />
+        <View style={styles.divider} />
+        <SelectField
+          label="Categoría"
+          value={categoria}
+          options={categoriaOptions}
+          onChange={setCategoria}
+          isLast
+        />
+      </GroupedSection>
+      <GroupedSection>
+        <ListRow
+          title="Unirse con código"
+          subtitle="Ingresá el código de 6 caracteres"
+          onPress={() => setModalCodigo(true)}
+          isLast
+        />
+      </GroupedSection>
+      {error ? <ErrorState message={error} onRetry={cargar} /> : null}
+      {items.length > 0 ? (
+        <View style={styles.desafiosSection}>
+          <SectionTitle>Desafíos</SectionTitle>
+          {items.map((item) => (
+            <DesafioListRow
+              key={item.id}
+              desafio={item}
+              hoy={hoy}
+              onPress={() => router.push(`/desafio/${item.id}`)}
+            />
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.filters}>
-        <Text style={styles.filterLabel}>Estado</Text>
-        <View style={styles.chips}>
-          {estados.map((item) => (
-            <Pressable
-              key={item}
-              style={[styles.chip, estado === item && styles.chipActive]}
-              onPress={() => setEstado(estado === item ? '' : item)}>
-              <Text style={styles.chipText}>{item}</Text>
-            </Pressable>
-          ))}
-        </View>
-        <Text style={styles.filterLabel}>Categoría</Text>
-        <View style={styles.chips}>
-          {categorias.map((item) => (
-            <Pressable
-              key={item}
-              style={[styles.chip, categoria === item && styles.chipActive]}
-              onPress={() => setCategoria(categoria === item ? '' : item)}>
-              <Text style={styles.chipText}>{item}</Text>
-            </Pressable>
-          ))}
-        </View>
-        <PrimaryButton label="Unirse con código" onPress={() => setModalVisible(true)} />
-      </View>
-
-      {error ? <ErrorState message={error} onRetry={cargar} /> : null}
-
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <FlatList
-        data={items}
-        keyExtractor={(item) => item.id}
-        refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={cargar} />
-        }
-        contentContainerStyle={styles.list}
+        data={[]}
+        renderItem={null}
+        ListHeaderComponent={header}
         ListEmptyComponent={
-          error
-            ? undefined
-            : (
+          !error && items.length === 0
+            ? (
               <EmptyState
                 title="Sin resultados"
                 message="Probá otros filtros o creá un desafío."
               />
             )
+            : null
         }
-        renderItem={({ item }) => (
-          <Pressable
-            style={styles.card}
-            onPress={() => router.push(`/desafio/${item.id}`)}>
-            <Text style={styles.cardTitle}>{item.nombre}</Text>
-            <BadgeEstado estado={item.estado} />
-            <Text style={styles.cardMeta}>
-              {item.categoria} · {item.fechaInicio} → {item.fechaFin}
-            </Text>
-          </Pressable>
-        )}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={cargar} />}
+        contentContainerStyle={styles.list}
       />
 
-      <Modal visible={modalVisible} transparent animationType="slide">
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Código de invitación</Text>
-            <TextInput
-              style={styles.input}
-              autoCapitalize="characters"
-              maxLength={6}
-              value={codigo}
-              onChangeText={setCodigo}
-              placeholder="ABC123"
-            />
-            <PrimaryButton
-              label="Unirme"
-              onPress={unirse}
-              disabled={codigo.length < 6 || uniendo}
-            />
-            <PrimaryButton
-              label="Cancelar"
-              variant="secondary"
-              onPress={() => setModalVisible(false)}
-            />
-          </View>
+      <BottomSheet
+        visible={modalCodigo}
+        onClose={() => setModalCodigo(false)}
+        size="compact">
+        <Text style={styles.modalTitle}>Código de invitación</Text>
+        <TextField
+          autoCapitalize="characters"
+          maxLength={6}
+          value={codigo}
+          onChangeText={setCodigo}
+          placeholder="ABC123"
+          style={styles.modalInput}
+        />
+        <View style={styles.modalActions}>
+          <PrimaryButton
+            label="Unirme"
+            onPress={unirse}
+            disabled={codigo.length < 6 || uniendo}
+          />
+          <PrimaryButton
+            label="Cancelar"
+            variant="secondary"
+            onPress={() => setModalCodigo(false)}
+          />
         </View>
-      </Modal>
-    </View>
+      </BottomSheet>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: lightColors.background },
-  filters: { padding: 16, gap: 8 },
-  filterLabel: {
-    ...typography.footnote,
-    color: lightColors.labelSecondary,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    backgroundColor: lightColors.surface,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  chipActive: { backgroundColor: lightColors.primarySoft },
-  chipText: {
-    ...typography.footnote,
-    fontFamily: 'Inter_400Regular',
-    color: lightColors.label,
-  },
-  list: { padding: 16, paddingTop: 0 },
-  card: {
-    backgroundColor: lightColors.surface,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    gap: 6,
-  },
-  cardTitle: {
-    ...typography.headline,
-    color: lightColors.label,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  cardMeta: {
-    ...typography.footnote,
-    color: lightColors.labelSecondary,
-    fontFamily: 'Inter_400Regular',
-  },
-  modalBackdrop: {
+  container: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
+    backgroundColor: lightColors.background,
   },
-  modalCard: {
-    backgroundColor: lightColors.surface,
-    padding: 20,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    gap: 12,
+  header: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+  },
+  desafiosSection: {
+    marginBottom: spacing.lg,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: lightColors.separator,
+    marginLeft: spacing.lg,
+  },
+  list: {
+    paddingBottom: spacing.xxl,
   },
   modalTitle: {
     ...typography.title2,
     fontFamily: 'Inter_700Bold',
-    color: lightColors.label,
+    marginBottom: spacing.md,
   },
-  input: {
+  modalInput: {
     backgroundColor: lightColors.background,
-    borderRadius: 12,
-    padding: 14,
-    fontFamily: 'Inter_400Regular',
+    marginBottom: spacing.md,
+  },
+  modalActions: {
+    gap: spacing.sm,
   },
 });

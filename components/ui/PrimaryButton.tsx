@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { lightColors } from '@/theme/light';
+import { minTouchTarget, radius } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
 type PrimaryButtonProps = {
@@ -31,7 +32,9 @@ export function PrimaryButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        { backgroundColor, opacity: disabled ? 0.5 : pressed ? 0.85 : 1 },
+        { backgroundColor },
+        disabled && styles.disabled,
+        pressed && !disabled && styles.pressed,
       ]}>
       <Text style={[styles.label, { color }]}>{label}</Text>
     </Pressable>
@@ -40,13 +43,20 @@ export function PrimaryButton({
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 48,
-    borderRadius: 12,
+    minHeight: minTouchTarget,
+    borderRadius: radius.md + 2,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
   label: {
     ...typography.headline,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  disabled: {
+    opacity: 0.45,
+  },
+  pressed: {
+    opacity: 0.82,
   },
 });

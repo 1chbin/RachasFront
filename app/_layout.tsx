@@ -36,7 +36,15 @@ export default function RootLayout() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="desafio/[id]" options={{ title: 'Desafío' }} />
+        <Stack.Screen
+          name="desafio/[id]"
+          options={{
+            presentation: 'transparentModal',
+            headerShown: false,
+            animation: 'slide_from_bottom',
+            contentStyle: { backgroundColor: 'transparent' },
+          }}
+        />
       </Stack>
     </SessionProvider>
   );
