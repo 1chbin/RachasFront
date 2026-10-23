@@ -35,5 +35,5 @@ body,
   height: 100%;
 }
 body {
-  background-color: #F2F2F7;
+  background-color: #F8F7FC;
 }`;

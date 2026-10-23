@@ -21,13 +21,16 @@ const styles = StyleSheet.create({
   input: {
     ...typography.body,
     backgroundColor: lightColors.surface,
-    borderRadius: radius.md,
+    borderRadius: radius.button,
     paddingHorizontal: 16,
     paddingVertical: 12,
     minHeight: 44,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: lightColors.separator,
   },
   grouped: {
     borderRadius: 0,
     backgroundColor: 'transparent',
+    borderWidth: 0,
   },
 });

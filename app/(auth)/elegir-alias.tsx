@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Href, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { TextField } from '@/components/ui/TextField';
+import { Logo } from '@/components/brand/Logo';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { GradientButton } from '@/components/ui/GradientButton';
+import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { TextField } from '@/components/ui/TextField';
 import { useSession } from '@/context/SessionContext';
 import { mensajeErrorAmigable } from '@/lib/errors';
 import { actualizarAlias } from '@/services/api/usuarios';
@@ -35,19 +37,22 @@ export default function ElegirAliasScreen() {
   return (
     <SafeAreaView style={styles.root}>
       <View style={styles.content}>
+        <Logo size={80} />
         <Text style={styles.title}>Elegí tu alias</Text>
         <Text style={styles.subtitle}>
           Es tu nombre público en Rachas. Debe ser único (3–20 caracteres, letras,
           números y guion bajo).
         </Text>
         {error ? <ErrorState message={error} onRetry={() => setError(null)} /> : null}
-        <TextField
-          placeholder="mi_alias"
-          autoCapitalize="none"
-          value={alias}
-          onChangeText={setAlias}
-        />
-        <PrimaryButton
+        <SurfaceCard style={styles.card}>
+          <TextField
+            placeholder="mi_alias"
+            autoCapitalize="none"
+            value={alias}
+            onChangeText={setAlias}
+          />
+        </SurfaceCard>
+        <GradientButton
           label="Continuar"
           onPress={guardar}
           disabled={guardando || alias.trim().length < 3}
@@ -67,13 +72,19 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     gap: spacing.md,
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  card: {
+    width: '100%',
   },
   title: {
-    ...typography.title2,
-    fontFamily: 'Inter_700Bold',
+    ...typography.title1,
+    textAlign: 'center',
   },
   subtitle: {
     ...typography.subhead,
     color: lightColors.labelSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
   },
 });

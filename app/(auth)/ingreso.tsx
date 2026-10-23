@@ -18,10 +18,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Logo } from '@/components/brand/Logo';
+import { GradientButton } from '@/components/ui/GradientButton';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { TextField } from '@/components/ui/TextField';
-import { GroupedSection } from '@/components/ui/GroupedSection';
 import {
   ingresarConEmail,
   registrarConEmail,
@@ -154,9 +155,8 @@ export default function IngresoScreen() {
             contentContainerStyle={styles.sheetScroll}>
             {error ? <ErrorState message={error} onRetry={() => setError(null)} /> : null}
 
-            <GroupedSection>
+            <SurfaceCard>
               <TextField
-                grouped
                 placeholder="Email"
                 autoCapitalize="none"
                 keyboardType="email-address"
@@ -165,15 +165,14 @@ export default function IngresoScreen() {
               />
               <View style={styles.fieldDivider} />
               <TextField
-                grouped
                 placeholder="Contraseña"
                 secureTextEntry
                 value={password}
                 onChangeText={setPassword}
               />
-            </GroupedSection>
+            </SurfaceCard>
 
-            <PrimaryButton
+            <GradientButton
               label={
                 cargando
                   ? 'Esperá…'

@@ -44,7 +44,7 @@ export function PrimaryButton({
 const styles = StyleSheet.create({
   button: {
     minHeight: minTouchTarget,
-    borderRadius: radius.md + 2,
+    borderRadius: radius.button,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,

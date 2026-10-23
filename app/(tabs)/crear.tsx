@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { DateRangeCalendar } from '@/components/crear/DateRangeCalendar';
 import { CategoriaIcon } from '@/components/desafio/CategoriaIcon';
-import { GroupedSection } from '@/components/ui/GroupedSection';
-import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { Screen } from '@/components/ui/Screen';
+import { AppHeader } from '@/components/ui/AppHeader';
+import { GradientButton } from '@/components/ui/GradientButton';
 import { SelectField } from '@/components/ui/SelectField';
+import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { TextField } from '@/components/ui/TextField';
 import { CATEGORIAS_ORDEN, metaCategoria } from '@/lib/categorias';
 import { mensajeErrorAmigable } from '@/lib/errors';
@@ -15,6 +16,7 @@ import { crearDesafio } from '@/services/api/desafios';
 import { useSession } from '@/context/SessionContext';
 import { lightColors } from '@/theme/light';
 import { spacing } from '@/theme/spacing';
+import { typography } from '@/theme/typography';
 import type { CategoriaDesafio } from '@/types/api';
 
 export default function CrearScreen() {
@@ -61,20 +63,22 @@ export default function CrearScreen() {
   };
 
   return (
-    <Screen title="Nuevo desafío">
-      <View style={styles.form}>
-        <GroupedSection title="Información">
-          <TextField grouped placeholder="Nombre (3-60)" value={nombre} onChangeText={setNombre} />
-          <View style={styles.divider} />
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <AppHeader title="Nuevo desafío" />
+        <Text style={styles.sectionLabel}>Información</Text>
+        <SurfaceCard style={styles.card}>
+          <TextField placeholder="Nombre (3-60)" value={nombre} onChangeText={setNombre} />
+          <View style={styles.gap} />
           <TextField
-            grouped
             placeholder="Descripción (opcional)"
             value={descripcion}
             onChangeText={setDescripcion}
           />
-        </GroupedSection>
+        </SurfaceCard>
 
-        <GroupedSection title="Categoría">
+        <Text style={styles.sectionLabel}>Categoría</Text>
+        <SurfaceCard padding="md">
           <SelectField
             label="Elegí una categoría"
             value={categoria}
@@ -84,9 +88,10 @@ export default function CrearScreen() {
             }}
             isLast
           />
-        </GroupedSection>
+        </SurfaceCard>
 
-        <GroupedSection title="Fechas y cupo">
+        <Text style={styles.sectionLabel}>Fechas y cupo</Text>
+        <SurfaceCard>
           <DateRangeCalendar
             hoyMinimo={hoy}
             fechaInicio={fechaInicio}
@@ -96,33 +101,49 @@ export default function CrearScreen() {
               setFechaFin(fin);
             }}
           />
-          <View style={styles.divider} />
+        </SurfaceCard>
+
+        <SurfaceCard style={styles.card}>
           <TextField
-            grouped
-            placeholder="Máx. participantes (2-20)"
+            placeholder="Cupo de participantes (2-20)"
             keyboardType="number-pad"
             value={maxParticipantes}
             onChangeText={setMaxParticipantes}
           />
-        </GroupedSection>
+        </SurfaceCard>
 
-        <PrimaryButton
-          label="Crear desafío"
+        <GradientButton
+          label={guardando ? 'Creando…' : 'Crear desafío'}
           onPress={guardar}
           disabled={guardando || nombre.length < 3 || !rangoValido}
         />
-      </View>
-    </Screen>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  form: {
-    gap: spacing.md,
+  safe: {
+    flex: 1,
+    backgroundColor: lightColors.background,
   },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: lightColors.separator,
-    marginLeft: spacing.lg,
+  scroll: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxl + spacing.lg,
+    gap: spacing.sm,
+  },
+  sectionLabel: {
+    ...typography.subhead,
+    fontFamily: 'Inter_600SemiBold',
+    color: lightColors.labelSecondary,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    marginLeft: spacing.xs,
+  },
+  card: {
+    marginBottom: spacing.sm,
+  },
+  gap: {
+    height: spacing.md,
   },
 });

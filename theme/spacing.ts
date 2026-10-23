@@ -12,6 +12,9 @@ export const radius = {
   md: 12,
   lg: 16,
   xl: 20,
+  card: 22,
+  button: 16,
+  chip: 20,
   sheet: 28,
 };
 

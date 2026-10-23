@@ -1,24 +1,28 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
-import { DesafioListRow } from '@/components/desafio/DesafioListRow';
+import { ChallengeExploreCard } from '@/components/desafio/ChallengeExploreCard';
 import { CategoriaIcon } from '@/components/desafio/CategoriaIcon';
+import { AppHeader } from '@/components/ui/AppHeader';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { GroupedSection, SectionTitle } from '@/components/ui/GroupedSection';
-import { ListRow } from '@/components/ui/ListRow';
+import { FilterChips } from '@/components/ui/FilterChips';
+import { GradientButton } from '@/components/ui/GradientButton';
 import { LoadingView } from '@/components/ui/LoadingView';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { SelectField } from '@/components/ui/SelectField';
+import { SearchField } from '@/components/ui/SearchField';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { TextField } from '@/components/ui/TextField';
 import { useSession } from '@/context/SessionContext';
 import {
@@ -29,7 +33,7 @@ import {
 } from '@/lib/categorias';
 import { hoyCalendario } from '@/lib/fechas';
 import { mensajeErrorAmigable } from '@/lib/errors';
-import { listarDesafios, unirseDesafio } from '@/services/api/desafios';
+import { listarDesafios, listarParticipantes, unirseDesafio } from '@/services/api/desafios';
 import { lightColors } from '@/theme/light';
 import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -45,6 +49,10 @@ export default function ExplorarScreen() {
   const [error, setError] = useState<string | null>(null);
   const [estado, setEstado] = useState<EstadoDesafio | ''>('');
   const [categoria, setCategoria] = useState<CategoriaDesafio | ''>('');
+  const [busqueda, setBusqueda] = useState('');
+  const [participantsById, setParticipantsById] = useState<Record<string, string[]>>(
+    {},
+  );
   const [modalCodigo, setModalCodigo] = useState(false);
   const [codigo, setCodigo] = useState('');
   const [uniendo, setUniendo] = useState(false);
@@ -73,6 +81,49 @@ export default function ExplorarScreen() {
     }, [cargar]),
   );
 
+  const filtrados = useMemo(() => {
+    const q = busqueda.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((d) => {
+      const cat = metaCategoria(d.categoria).label.toLowerCase();
+      return (
+        d.nombre.toLowerCase().includes(q) ||
+        (d.descripcion?.toLowerCase().includes(q) ?? false) ||
+        cat.includes(q)
+      );
+    });
+  }, [busqueda, items]);
+
+  useEffect(() => {
+    const ids = filtrados.slice(0, 8).map((d) => d.id);
+    if (ids.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const entries = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const participantes = await listarParticipantes(id);
+            return [id, participantes.map((p) => p.usuario.alias)] as [string, string[]];
+          } catch {
+            return [id, [] as string[]] as [string, string[]];
+          }
+        }),
+      );
+      if (!cancelled) {
+        setParticipantsById((prev) => {
+          const next = { ...prev };
+          for (const [id, aliases] of entries) {
+            next[id] = aliases;
+          }
+          return next;
+        });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [filtrados]);
+
   const unirse = async () => {
     setUniendo(true);
     try {
@@ -93,7 +144,7 @@ export default function ExplorarScreen() {
   ];
 
   const categoriaOptions = [
-    { value: '' as CategoriaDesafio | '', label: 'Todas' },
+    { value: '' as CategoriaDesafio | '', label: 'Todos' },
     ...CATEGORIAS_ORDEN.map((c) => ({
       value: c,
       label: metaCategoria(c).label,
@@ -105,45 +156,29 @@ export default function ExplorarScreen() {
 
   const header = (
     <View style={styles.header}>
-      <ScreenHeader title="Explorar" />
-      <GroupedSection title="Filtros">
-        <SelectField
-          label="Estado"
-          value={estado}
-          options={estadoOptions}
-          onChange={setEstado}
-          isLast={false}
-        />
-        <View style={styles.divider} />
-        <SelectField
-          label="Categoría"
-          value={categoria}
-          options={categoriaOptions}
-          onChange={setCategoria}
-          isLast
-        />
-      </GroupedSection>
-      <GroupedSection>
-        <ListRow
-          title="Unirse con código"
-          subtitle="Ingresá el código de 6 caracteres"
-          onPress={() => setModalCodigo(true)}
-          isLast
-        />
-      </GroupedSection>
+      <AppHeader title="Explorar" showLogo={false} />
+      <SearchField value={busqueda} onChangeText={setBusqueda} />
+      <FilterChips options={categoriaOptions} value={categoria} onChange={setCategoria} />
+      <FilterChips options={estadoOptions} value={estado} onChange={setEstado} />
+
+      <Pressable onPress={() => setModalCodigo(true)}>
+        <SurfaceCard style={styles.joinCard}>
+          <View style={styles.joinRow}>
+            <View style={styles.joinIcon}>
+              <Ionicons name="people" size={22} color={lightColors.primary} />
+            </View>
+            <View style={styles.joinText}>
+              <Text style={styles.joinTitle}>Unirse con código</Text>
+              <Text style={styles.joinSubtitle}>Ingresá el código de 6 caracteres</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={lightColors.muted} />
+          </View>
+        </SurfaceCard>
+      </Pressable>
+
       {error ? <ErrorState message={error} onRetry={cargar} /> : null}
-      {items.length > 0 ? (
-        <View style={styles.desafiosSection}>
-          <SectionTitle>Desafíos</SectionTitle>
-          {items.map((item) => (
-            <DesafioListRow
-              key={item.id}
-              desafio={item}
-              hoy={hoy}
-              onPress={() => router.push(`/desafio/${item.id}`)}
-            />
-          ))}
-        </View>
+      {filtrados.length > 0 ? (
+        <SectionHeader title="Desafíos destacados" />
       ) : null}
     </View>
   );
@@ -151,11 +186,19 @@ export default function ExplorarScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <FlatList
-        data={[]}
-        renderItem={null}
+        data={filtrados}
+        keyExtractor={(item) => item.id}
         ListHeaderComponent={header}
+        renderItem={({ item }) => (
+          <ChallengeExploreCard
+            desafio={item}
+            hoy={hoy}
+            participantAliases={participantsById[item.id]}
+            onPress={() => router.push(`/desafio/${item.id}`)}
+          />
+        )}
         ListEmptyComponent={
-          !error && items.length === 0
+          !error && filtrados.length === 0
             ? (
               <EmptyState
                 title="Sin resultados"
@@ -182,7 +225,7 @@ export default function ExplorarScreen() {
           style={styles.modalInput}
         />
         <View style={styles.modalActions}>
-          <PrimaryButton
+          <GradientButton
             label="Unirme"
             onPress={unirse}
             disabled={codigo.length < 6 || uniendo}
@@ -205,17 +248,37 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: spacing.lg,
-    gap: spacing.sm,
   },
-  desafiosSection: {
+  joinCard: {
     marginBottom: spacing.lg,
   },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: lightColors.separator,
-    marginLeft: spacing.lg,
+  joinRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  joinIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: lightColors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  joinText: {
+    flex: 1,
+    gap: 2,
+  },
+  joinTitle: {
+    ...typography.headline,
+    fontFamily: 'Inter_700Bold',
+  },
+  joinSubtitle: {
+    ...typography.footnote,
+    color: lightColors.labelSecondary,
   },
   list: {
+    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xxl,
   },
   modalTitle: {
@@ -224,7 +287,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   modalInput: {
-    backgroundColor: lightColors.background,
     marginBottom: spacing.md,
   },
   modalActions: {

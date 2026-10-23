@@ -40,6 +40,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: lightColors.muted,
         tabBarLabelStyle: styles.tabLabel,
         tabBarStyle: styles.tabBar,
+        tabBarHideOnKeyboard: true,
       }}>
       <Tabs.Screen
         name="inicio"
@@ -65,8 +66,8 @@ export default function TabLayout() {
               focused={focused}
               color={String(color)}
               size={size}
-              active="search"
-              inactive="search-outline"
+              active="compass"
+              inactive="compass-outline"
             />
           ),
         }}
@@ -110,8 +111,9 @@ const styles = StyleSheet.create({
     backgroundColor: lightColors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: lightColors.tabBarBorder,
-    paddingTop: 4,
-    height: Platform.OS === 'ios' ? 88 : 64,
+    paddingTop: 6,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+    height: Platform.OS === 'ios' ? 88 : 68,
   },
   tabLabel: {
     fontFamily: 'Inter_600SemiBold',

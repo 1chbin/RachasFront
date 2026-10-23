@@ -24,7 +24,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: radius.sm,
+    borderRadius: radius.chip,
     gap: 6,
   },
   dot: {

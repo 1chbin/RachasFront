@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { lightColors } from '@/theme/light';
+import { cardShadow } from '@/theme/shadows';
 import { radius, spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
@@ -39,8 +40,9 @@ const styles = StyleSheet.create({
   },
   group: {
     backgroundColor: lightColors.surface,
-    borderRadius: radius.lg,
+    borderRadius: radius.card,
     overflow: 'hidden',
+    ...cardShadow,
   },
   footer: {
     ...typography.footnote,

@@ -15,6 +15,7 @@ import { BadgeEstado } from '@/components/ui/BadgeEstado';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { GroupedSection } from '@/components/ui/GroupedSection';
 import { ListRow } from '@/components/ui/ListRow';
+import { GradientButton } from '@/components/ui/GradientButton';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { TextField } from '@/components/ui/TextField';
 import { StreakBurst } from '@/components/streak/StreakBurst';
@@ -305,7 +306,7 @@ export default function DesafioDetalleScreen() {
 
         {desafio.estado === 'ACTIVO' ? (
           <View style={styles.actions}>
-            <PrimaryButton
+            <GradientButton
               label="Registrar check-in de hoy"
               onPress={checkInHoy}
               disabled={mutando}

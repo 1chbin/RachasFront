@@ -11,6 +11,12 @@ export const typography = {
     fontFamily: bold,
     color: lightColors.label,
   },
+  title1: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontFamily: bold,
+    color: lightColors.label,
+  },
   title2: {
     fontSize: 22,
     lineHeight: 28,
