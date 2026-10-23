@@ -10,6 +10,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { clearStoredIdToken, getStoredIdToken, setStoredIdToken } from '@/lib/authToken';
 import { firebaseAuth } from '@/services/auth/firebaseApp';
 import { signOutFirebase } from '@/services/auth/googleSignIn';
+import { router } from 'expo-router';
 import { obtenerMe } from '@/services/api/usuarios';
 import { setApiUnauthorizedHandler } from '@/services/api/client';
 import type { Usuario } from '@/types/api';
@@ -49,7 +50,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setApiUnauthorizedHandler(() => {
-      limpiarSesion();
+      void limpiarSesion().then(() => {
+        router.replace('/(auth)/ingreso');
+      });
     });
     return () => setApiUnauthorizedHandler(null);
   }, [limpiarSesion]);

@@ -1,19 +1,19 @@
 import { Href, Redirect } from 'expo-router';
 import { LoadingView } from '@/components/ui/LoadingView';
-import { useSession } from '@/context/SessionContext';
+import { useAuthGate } from '@/hooks/useAuthGate';
 
 export default function Index() {
-  const { ready, usuario, usuarioId } = useSession();
+  const status = useAuthGate();
 
-  if (!ready) {
+  if (status === 'loading') {
     return <LoadingView />;
   }
 
-  if (!usuarioId || !usuario) {
+  if (status === 'login') {
     return <Redirect href="/(auth)/ingreso" />;
   }
 
-  if (usuario.requiereAlias) {
+  if (status === 'alias') {
     return <Redirect href={'/(auth)/elegir-alias' as Href} />;
   }
 

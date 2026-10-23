@@ -67,8 +67,6 @@ export default function IngresoScreen() {
   useEffect(() => {
     if (usuario?.requiereAlias) {
       router.replace('/(auth)/elegir-alias' as Href);
-    } else if (usuario) {
-      router.replace('/(tabs)/inicio' as Href);
     }
   }, [usuario]);
 
