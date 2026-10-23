@@ -1,20 +1,23 @@
-import { useCallback, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { obtenerResumenInicio } from '@/services/api/inicio';
 import { mensajeErrorAmigable } from '@/lib/errors';
 import type { ResumenInicioItem } from '@/types/api';
 
-export function useResumenInicio(usuarioId: string | null) {
+export function useResumenInicio(activo: boolean) {
   const [items, setItems] = useState<ResumenInicioItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const cargar = useCallback(async (): Promise<ResumenInicioItem[]> => {
-    if (!usuarioId) return [];
+  const recargar = useCallback(async (): Promise<ResumenInicioItem[]> => {
+    if (!activo) {
+      setItems([]);
+      setLoading(false);
+      return [];
+    }
     setLoading(true);
     setError(null);
     try {
-      const data = await obtenerResumenInicio(usuarioId);
+      const data = await obtenerResumenInicio();
       setItems(data.desafios);
       return data.desafios;
     } catch (err) {
@@ -23,13 +26,11 @@ export function useResumenInicio(usuarioId: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [usuarioId]);
+  }, [activo]);
 
-  useFocusEffect(
-    useCallback(() => {
-      cargar();
-    }, [cargar]),
-  );
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
 
-  return { items, loading, error, recargar: cargar };
+  return { items, loading, error, recargar };
 }

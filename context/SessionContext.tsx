@@ -6,19 +6,18 @@ import {
   useMemo,
   useState,
 } from 'react';
-import {
-  clearStoredUsuarioId,
-  getStoredUsuarioId,
-  setStoredUsuarioId,
-} from '@/lib/session';
-import { obtenerUsuario } from '@/services/api/usuarios';
+import { onAuthStateChanged } from 'firebase/auth';
+import { clearStoredIdToken, getStoredIdToken, setStoredIdToken } from '@/lib/authToken';
+import { firebaseAuth } from '@/services/auth/firebaseApp';
+import { signOutFirebase } from '@/services/auth/googleSignIn';
+import { obtenerMe } from '@/services/api/usuarios';
+import { setApiUnauthorizedHandler } from '@/services/api/client';
 import type { Usuario } from '@/types/api';
 
 type SessionContextValue = {
   ready: boolean;
   usuarioId: string | null;
   usuario: Usuario | null;
-  iniciarSesion: (id: string) => Promise<void>;
   cerrarSesion: () => Promise<void>;
   refrescarUsuario: () => Promise<void>;
 };
@@ -27,64 +26,91 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
-  const [usuarioId, setUsuarioId] = useState<string | null>(null);
   const [usuario, setUsuario] = useState<Usuario | null>(null);
 
-  const cargarUsuario = useCallback(async (id: string) => {
-    const data = await obtenerUsuario(id);
-    setUsuario(data);
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      const id = await getStoredUsuarioId();
-      setUsuarioId(id);
-      setReady(true);
-
-      if (!id) {
-        return;
-      }
-
-      try {
-        await cargarUsuario(id);
-      } catch {
-        await clearStoredUsuarioId();
-        setUsuarioId(null);
-        setUsuario(null);
-      }
-    })();
-  }, [cargarUsuario]);
-
-  const iniciarSesion = useCallback(
-    async (id: string) => {
-      await setStoredUsuarioId(id);
-      setUsuarioId(id);
-      await cargarUsuario(id);
-    },
-    [cargarUsuario],
-  );
-
-  const cerrarSesion = useCallback(async () => {
-    await clearStoredUsuarioId();
-    setUsuarioId(null);
+  const limpiarSesion = useCallback(async () => {
+    await signOutFirebase().catch(() => undefined);
+    await clearStoredIdToken();
     setUsuario(null);
   }, []);
 
+  const cargarPerfil = useCallback(async () => {
+    const data = await obtenerMe();
+    setUsuario(data);
+  }, []);
+
   const refrescarUsuario = useCallback(async () => {
-    if (!usuarioId) return;
-    await cargarUsuario(usuarioId);
-  }, [cargarUsuario, usuarioId]);
+    await cargarPerfil();
+  }, [cargarPerfil]);
+
+  const cerrarSesion = useCallback(async () => {
+    await limpiarSesion();
+  }, [limpiarSesion]);
+
+  useEffect(() => {
+    setApiUnauthorizedHandler(() => {
+      limpiarSesion();
+    });
+    return () => setApiUnauthorizedHandler(null);
+  }, [limpiarSesion]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const stored = await getStoredIdToken();
+      if (stored) {
+        try {
+          await cargarPerfil();
+        } catch {
+          await clearStoredIdToken();
+          if (!cancelled) {
+            setUsuario(null);
+          }
+        }
+      }
+      if (!cancelled) {
+        setReady(true);
+      }
+    })();
+
+    const unsubscribe = onAuthStateChanged(firebaseAuth, async (user) => {
+      if (cancelled) {
+        return;
+      }
+      if (!user) {
+        const stored = await getStoredIdToken();
+        if (!stored) {
+          setUsuario(null);
+        }
+        return;
+      }
+      try {
+        const token = await user.getIdToken();
+        await setStoredIdToken(token);
+        await cargarPerfil();
+      } catch {
+        await limpiarSesion();
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [cargarPerfil, limpiarSesion]);
+
+  const usuarioId = usuario?.id ?? null;
 
   const value = useMemo(
     () => ({
       ready,
       usuarioId,
       usuario,
-      iniciarSesion,
       cerrarSesion,
       refrescarUsuario,
     }),
-    [ready, usuarioId, usuario, iniciarSesion, cerrarSesion, refrescarUsuario],
+    [ready, usuarioId, usuario, cerrarSesion, refrescarUsuario],
   );
 
   return (

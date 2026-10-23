@@ -19,18 +19,13 @@ export function deshacerUltimoCheckIn(desafioId: string) {
   );
 }
 
-export function listarCheckIns(
-  desafioId: string,
-  usuarioId: string,
-  page = 1,
-  limit = 20,
-) {
+export function listarCheckIns(desafioId: string, page = 1, limit = 20) {
   const query = new URLSearchParams({
-    usuarioId,
     page: String(page),
     limit: String(limit),
   });
   return apiRequest<Paginated<CheckIn>>(
     `/desafios/${desafioId}/check-ins?${query.toString()}`,
+    { auth: true },
   );
 }

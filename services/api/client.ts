@@ -1,28 +1,14 @@
-import { getStoredUsuarioId } from '@/lib/session';
+import { resolveApiBaseUrl } from '@/lib/apiBaseUrl';
+import { getStoredIdToken, setStoredIdToken } from '@/lib/authToken';
 import { ApiError } from '@/lib/errors';
+import { refreshFirebaseIdToken } from '@/services/auth/googleSignIn';
 import { Platform } from 'react-native';
 
-const ANDROID_EMULATOR_HOST = '10.0.2.2';
-const WEB_DEV_API = 'http://localhost:3000';
-const ANDROID_DEFAULT_API = `http://${ANDROID_EMULATOR_HOST}:3000`;
-
-function resolveApiBaseUrl(): string {
-  const fromEnv = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '');
-  const isWebWithEmulatorUrl =
-    Platform.OS === 'web' &&
-    fromEnv !== undefined &&
-    fromEnv.includes(ANDROID_EMULATOR_HOST);
-
-  if (fromEnv && !isWebWithEmulatorUrl) {
-    return fromEnv;
-  }
-  if (Platform.OS === 'web') {
-    return WEB_DEV_API;
-  }
-  return fromEnv ?? ANDROID_DEFAULT_API;
-}
-
-const baseUrl = resolveApiBaseUrl();
+const baseUrl = resolveApiBaseUrl({
+  platformOS: Platform.OS,
+  apiUrlFromEnv: process.env.EXPO_PUBLIC_API_URL,
+  apiUrlWebFromEnv: process.env.EXPO_PUBLIC_API_URL_WEB,
+});
 
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
@@ -30,9 +16,24 @@ type RequestOptions = {
   auth?: boolean;
 };
 
-export async function apiRequest<T>(
+let onUnauthorized: (() => void) | null = null;
+
+export function setApiUnauthorizedHandler(handler: (() => void) | null) {
+  onUnauthorized = handler;
+}
+
+async function resolveAuthHeader(): Promise<string | null> {
+  const stored = await getStoredIdToken();
+  if (stored) {
+    return stored;
+  }
+  return refreshFirebaseIdToken();
+}
+
+async function fetchWithAuth<T>(
   path: string,
-  options: RequestOptions = {},
+  options: RequestOptions,
+  retryOn401: boolean,
 ): Promise<T> {
   const { method = 'GET', body, auth = false } = options;
   const headers: Record<string, string> = {
@@ -44,11 +45,11 @@ export async function apiRequest<T>(
   }
 
   if (auth) {
-    const usuarioId = await getStoredUsuarioId();
-    if (!usuarioId) {
+    const token = await resolveAuthHeader();
+    if (!token) {
       throw new ApiError(401, 'No hay sesión activa');
     }
-    headers['x-usuario-id'] = usuarioId;
+    headers.Authorization = `Bearer ${token}`;
   }
 
   let response: Response;
@@ -62,12 +63,24 @@ export async function apiRequest<T>(
     throw new TypeError('Network request failed');
   }
 
+  if (auth && response.status === 401 && retryOn401) {
+    const refreshed = await refreshFirebaseIdToken();
+    if (refreshed) {
+      return fetchWithAuth(path, options, false);
+    }
+    onUnauthorized?.();
+    throw new ApiError(401, 'Sesión vencida');
+  }
+
   if (response.status === 204) {
     return undefined as T;
   }
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (response.status === 401) {
+      onUnauthorized?.();
+    }
     const message =
       typeof payload.message === 'string'
         ? payload.message
@@ -80,6 +93,21 @@ export async function apiRequest<T>(
   return payload as T;
 }
 
+export async function apiRequest<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
+  return fetchWithAuth(path, options, true);
+}
+
 export function getApiBaseUrl(): string {
   return baseUrl;
+}
+
+export async function syncIdTokenFromFirebase(): Promise<string | null> {
+  const token = await refreshFirebaseIdToken();
+  if (token) {
+    await setStoredIdToken(token);
+  }
+  return token;
 }

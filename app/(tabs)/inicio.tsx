@@ -19,7 +19,7 @@ import { typography } from '@/theme/typography';
 
 export default function InicioScreen() {
   const { usuarioId, usuario } = useSession();
-  const { items, loading, error, recargar } = useResumenInicio(usuarioId);
+  const { items, loading, error, recargar } = useResumenInicio(!!usuarioId);
   const [refreshing, setRefreshing] = useState(false);
   const [checkInId, setCheckInId] = useState<string | null>(null);
   const [burst, setBurst] = useState<{

@@ -1,30 +1,25 @@
 import { apiRequest } from './client';
 import type { Usuario } from '@/types/api';
 
-export function listarUsuarios() {
-  return apiRequest<Usuario[]>('/usuarios');
+export function obtenerMe() {
+  return apiRequest<Usuario>('/usuarios/me', { auth: true });
 }
 
-export function crearUsuario(body: {
-  nombre: string;
-  alias: string;
-  email: string;
+export function actualizarUsuario(body: {
+  nombre?: string;
   zonaHoraria?: string;
 }) {
-  return apiRequest<Usuario>('/usuarios', { method: 'POST', body });
-}
-
-export function obtenerUsuario(id: string) {
-  return apiRequest<Usuario>(`/usuarios/${id}`);
-}
-
-export function actualizarUsuario(
-  id: string,
-  body: { nombre?: string; zonaHoraria?: string },
-) {
-  return apiRequest<Usuario>(`/usuarios/${id}`, {
+  return apiRequest<Usuario>('/usuarios/me', {
     method: 'PATCH',
     body,
+    auth: true,
+  });
+}
+
+export function actualizarAlias(alias: string) {
+  return apiRequest<Usuario>('/usuarios/me/alias', {
+    method: 'PATCH',
+    body: { alias },
     auth: true,
   });
 }

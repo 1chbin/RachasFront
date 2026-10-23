@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { Href, router } from 'expo-router';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -20,28 +20,32 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Logo } from '@/components/brand/Logo';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { LoadingView } from '@/components/ui/LoadingView';
-import { GroupedSection } from '@/components/ui/GroupedSection';
-import { ListRow } from '@/components/ui/ListRow';
 import { TextField } from '@/components/ui/TextField';
+import { GroupedSection } from '@/components/ui/GroupedSection';
+import {
+  ingresarConEmail,
+  registrarConEmail,
+} from '@/services/auth/emailAuth';
+import {
+  isGoogleSignInAvailable,
+  signInWithGoogle,
+} from '@/services/auth/googleSignIn';
+import { mensajeErrorFirebaseAuth } from '@/services/auth/firebaseAuthErrors';
 import { useSession } from '@/context/SessionContext';
 import { mensajeErrorAmigable } from '@/lib/errors';
-import { crearUsuario, listarUsuarios } from '@/services/api/usuarios';
 import { lightColors } from '@/theme/light';
 import { radius, spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
-import type { Usuario } from '@/types/api';
 
 export default function IngresoScreen() {
-  const { iniciarSesion } = useSession();
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { usuario, refrescarUsuario } = useSession();
   const [modoRegistro, setModoRegistro] = useState(false);
-  const [nombre, setNombre] = useState('');
-  const [alias, setAlias] = useState('');
   const [email, setEmail] = useState('');
-  const [guardando, setGuardando] = useState(false);
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [cargando, setCargando] = useState(false);
+
+  const googleDisponible = isGoogleSignInAvailable();
 
   const logoScale = useSharedValue(0.85);
   const logoOpacity = useSharedValue(0);
@@ -60,39 +64,41 @@ export default function IngresoScreen() {
     );
   }, [logoOpacity, logoScale, titleOpacity, subtitleOpacity, sheetTranslate]);
 
-  const cargar = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setUsuarios(await listarUsuarios());
-    } catch (err) {
-      setError(mensajeErrorAmigable(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    cargar();
-  }, []);
+    if (usuario?.requiereAlias) {
+      router.replace('/(auth)/elegir-alias' as Href);
+    } else if (usuario) {
+      router.replace('/(tabs)/inicio' as Href);
+    }
+  }, [usuario]);
 
-  const elegir = async (id: string) => {
-    await iniciarSesion(id);
-    router.replace('/(tabs)/inicio');
-  };
-
-  const registrar = async () => {
-    setGuardando(true);
+  const completarAuth = async (accion: () => Promise<void>) => {
+    setCargando(true);
     setError(null);
     try {
-      const usuario = await crearUsuario({ nombre, alias, email });
-      await iniciarSesion(usuario.id);
-      router.replace('/(tabs)/inicio');
+      await accion();
+      await refrescarUsuario();
     } catch (err) {
-      setError(mensajeErrorAmigable(err));
+      setError(mensajeErrorFirebaseAuth(err) || mensajeErrorAmigable(err));
     } finally {
-      setGuardando(false);
+      setCargando(false);
     }
+  };
+
+  const enviarEmail = () => {
+    if (!email.trim() || password.length < 6) {
+      setError('Completá email y contraseña (mínimo 6 caracteres).');
+      return;
+    }
+    if (modoRegistro) {
+      completarAuth(() => registrarConEmail(email, password));
+    } else {
+      completarAuth(() => ingresarConEmail(email, password));
+    }
+  };
+
+  const ingresarGoogle = () => {
+    completarAuth(() => signInWithGoogle());
   };
 
   const logoStyle = useAnimatedStyle(() => ({
@@ -113,8 +119,6 @@ export default function IngresoScreen() {
   const sheetStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: sheetTranslate.value }],
   }));
-
-  if (loading) return <LoadingView />;
 
   return (
     <View style={styles.root}>
@@ -138,79 +142,73 @@ export default function IngresoScreen() {
         <Animated.View style={[styles.sheet, sheetStyle]}>
           <View style={styles.sheetHandle} />
           <Text style={styles.sheetTitle}>
-            {modoRegistro ? 'Crear cuenta' : 'Elegí tu perfil'}
+            {modoRegistro ? 'Crear cuenta' : 'Ingresá'}
           </Text>
           <Text style={styles.sheetSubtitle}>
             {modoRegistro
-              ? 'Completá tus datos para empezar'
-              : 'O registrate si es tu primera vez'}
+              ? 'Registrate con email y contraseña (Firebase).'
+              : 'Usá tu email y contraseña. Google solo si ya te registraste.'}
           </Text>
 
           <ScrollView
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.sheetScroll}>
-            {error ? <ErrorState message={error} onRetry={cargar} /> : null}
+            {error ? <ErrorState message={error} onRetry={() => setError(null)} /> : null}
 
-            {modoRegistro ? (
-              <View style={styles.form}>
-                <GroupedSection>
-                  <TextField
-                    grouped
-                    placeholder="Nombre"
-                    value={nombre}
-                    onChangeText={setNombre}
-                  />
-                  <View style={styles.fieldDivider} />
-                  <TextField
-                    grouped
-                    placeholder="Alias"
-                    autoCapitalize="none"
-                    value={alias}
-                    onChangeText={setAlias}
-                  />
-                  <View style={styles.fieldDivider} />
-                  <TextField
-                    grouped
-                    placeholder="Email"
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    value={email}
-                    onChangeText={setEmail}
-                  />
-                </GroupedSection>
-                <PrimaryButton
-                  label="Crear cuenta"
-                  onPress={registrar}
-                  disabled={guardando || !nombre || !alias || !email}
-                />
-                <PrimaryButton
-                  label="Volver"
-                  variant="secondary"
-                  onPress={() => setModoRegistro(false)}
-                />
-              </View>
-            ) : error ? (
-              <PrimaryButton label="Registrarme" onPress={() => setModoRegistro(true)} />
+            <GroupedSection>
+              <TextField
+                grouped
+                placeholder="Email"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+              />
+              <View style={styles.fieldDivider} />
+              <TextField
+                grouped
+                placeholder="Contraseña"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+              />
+            </GroupedSection>
+
+            <PrimaryButton
+              label={
+                cargando
+                  ? 'Esperá…'
+                  : modoRegistro
+                    ? 'Registrarme'
+                    : 'Ingresar'
+              }
+              onPress={enviarEmail}
+              disabled={cargando || !email.trim() || password.length < 6}
+            />
+
+            <PrimaryButton
+              label={modoRegistro ? 'Ya tengo cuenta' : 'Crear cuenta'}
+              variant="secondary"
+              onPress={() => {
+                setModoRegistro(!modoRegistro);
+                setError(null);
+              }}
+              disabled={cargando}
+            />
+
+            {googleDisponible ? (
+              <PrimaryButton
+                label={cargando ? 'Esperá…' : 'Continuar con Google'}
+                variant="secondary"
+                onPress={ingresarGoogle}
+                disabled={cargando}
+              />
             ) : (
-              <View style={styles.form}>
-                {usuarios.length === 0 ? (
-                  <Text style={styles.empty}>No hay personas cargadas en el back.</Text>
-                ) : (
-                  <GroupedSection>
-                    {usuarios.map((item, index) => (
-                      <ListRow
-                        key={item.id}
-                        title={item.nombre}
-                        subtitle={`@${item.alias}`}
-                        onPress={() => elegir(item.id)}
-                        isLast={index === usuarios.length - 1}
-                      />
-                    ))}
-                  </GroupedSection>
-                )}
-                <PrimaryButton label="Registrarme" onPress={() => setModoRegistro(true)} />
-              </View>
+              <Text style={styles.googleHint}>
+                Google está disponible en la versión web (tecla w en Expo). En el
+                celular usá email y contraseña.
+              </Text>
             )}
           </ScrollView>
         </Animated.View>
@@ -225,15 +223,15 @@ const styles = StyleSheet.create({
     backgroundColor: lightColors.background,
   },
   hero: {
-    flex: 1,
-    minHeight: 220,
+    flex: 0.45,
+    minHeight: 200,
   },
   heroInner: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.lg,
     gap: spacing.sm,
   },
   heroTitle: {
@@ -269,7 +267,7 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     backgroundColor: lightColors.separator,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   sheetTitle: {
     ...typography.title2,
@@ -277,14 +275,11 @@ const styles = StyleSheet.create({
   },
   sheetSubtitle: {
     ...typography.subhead,
-    marginTop: spacing.xs,
-    marginBottom: spacing.lg,
+    color: lightColors.labelSecondary,
+    marginBottom: spacing.md,
   },
   sheetScroll: {
     paddingBottom: spacing.xxl,
-    gap: spacing.md,
-  },
-  form: {
     gap: spacing.md,
   },
   fieldDivider: {
@@ -292,10 +287,9 @@ const styles = StyleSheet.create({
     backgroundColor: lightColors.separator,
     marginLeft: spacing.lg,
   },
-  empty: {
-    ...typography.body,
+  googleHint: {
+    ...typography.caption,
     color: lightColors.labelSecondary,
     textAlign: 'center',
-    paddingVertical: spacing.lg,
   },
 });

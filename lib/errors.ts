@@ -13,7 +13,7 @@ export function mensajeErrorAmigable(error: unknown): string {
       case 400:
         return error.message || 'Los datos no son válidos.';
       case 403:
-        return 'No tenés permiso para hacer esta acción.';
+        return error.message || 'No tenés permiso para hacer esta acción.';
       case 404:
         return 'No encontramos lo que buscás.';
       case 409:

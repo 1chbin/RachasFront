@@ -1,8 +1,8 @@
 import { apiRequest } from './client';
 import type { ResumenInicio } from '@/types/api';
 
-export function obtenerResumenInicio(usuarioId: string) {
-  return apiRequest<ResumenInicio>(`/usuarios/${usuarioId}/inicio`, {
+export function obtenerResumenInicio() {
+  return apiRequest<ResumenInicio>('/usuarios/me/inicio', {
     auth: true,
   });
 }

@@ -15,6 +15,7 @@ export function listarDesafios(params: {
   const qs = query.toString();
   return apiRequest<Paginated<DesafioResumen>>(
     `/desafios${qs ? `?${qs}` : ''}`,
+    { auth: true },
   );
 }
 
@@ -65,6 +66,6 @@ export function listarParticipantes(desafioId: string) {
   });
 }
 
-export function listarDesafiosDeUsuario(usuarioId: string) {
-  return apiRequest<DesafioResumen[]>(`/usuarios/${usuarioId}/desafios`);
+export function listarMisDesafios() {
+  return apiRequest<DesafioResumen[]>('/usuarios/me/desafios', { auth: true });
 }

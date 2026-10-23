@@ -17,6 +17,7 @@ export interface Usuario {
   alias: string;
   email: string;
   zonaHoraria: string;
+  requiereAlias?: boolean;
 }
 
 export interface DesafioResumen {

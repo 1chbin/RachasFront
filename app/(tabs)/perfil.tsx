@@ -10,7 +10,7 @@ import { Screen } from '@/components/ui/Screen';
 import { TextField } from '@/components/ui/TextField';
 import { useSession } from '@/context/SessionContext';
 import { mensajeErrorAmigable } from '@/lib/errors';
-import { listarDesafiosDeUsuario } from '@/services/api/desafios';
+import { listarMisDesafios } from '@/services/api/desafios';
 import { actualizarUsuario } from '@/services/api/usuarios';
 import { obtenerRanking } from '@/services/api/ranking';
 import { lightColors } from '@/theme/light';
@@ -36,7 +36,7 @@ export default function PerfilScreen() {
     setLoading(true);
     setError(null);
     try {
-      const desafios = await listarDesafiosDeUsuario(usuarioId);
+      const desafios = await listarMisDesafios();
       const terminados = desafios.filter((d) => d.estado === 'FINALIZADO');
       const conResultado = await Promise.all(
         terminados.map(async (desafio) => {
@@ -72,7 +72,7 @@ export default function PerfilScreen() {
     if (!usuarioId) return;
     setGuardando(true);
     try {
-      await actualizarUsuario(usuarioId, { nombre, zonaHoraria });
+      await actualizarUsuario({ nombre, zonaHoraria });
       await refrescarUsuario();
     } catch (err) {
       alert(mensajeErrorAmigable(err));

@@ -15,10 +15,13 @@ Todos los comandos de esta guía se ejecutan **desde esta carpeta** (`RachasFron
 ## Configuración
 
 1. `cp .env.example .env` (o copiá el archivo en Windows).
-2. Ajustá `EXPO_PUBLIC_API_URL`:
-   - **Navegador web (`w`):** `http://localhost:3000` (si el `.env` tiene `10.0.2.2`, el cliente en web igual apunta a `localhost`)
+2. Completá las variables **Firebase** de `.env.example` (app Web en consola; p. ej. `rachas-50813`).
+3. Ajustá `EXPO_PUBLIC_API_URL`:
    - **Emulador Android:** `http://10.0.2.2:3000`
-   - **iPhone / Android físico (Expo Go, misma Wi‑Fi):** `http://<IP-de-tu-PC>:3000` (la misma IP que en `exp://192.168.x.x:8081` de la terminal). Reiniciá con `npx expo start -c` tras cambiar `.env`.
+   - **iPhone / Android físico (Expo Go, misma Wi‑Fi):** `http://<IP-de-tu-PC>:3000` (la misma IP que en `exp://192.168.x.x:8081` de la terminal; sin el `:8081`). Revisá que no haya un dígito de más en la IP.
+   - **Navegador web (`w`):** no hace falta cambiar el `.env` solo por web: si la URL es `10.0.2.2` o una IP `192.168.x.x`, la app en web llama al back en **`http://localhost:3000`** automáticamente. El back debe estar corriendo en tu PC (`npm run start:dev` en `RachasBack/`).
+   - Override opcional: `EXPO_PUBLIC_API_URL_WEB` si el back en web no es localhost.
+   - Reiniciá con `npx expo start -c` tras cambiar `.env`.
 
 ## Ejecución
 
@@ -29,7 +32,9 @@ npx expo start
 
 - **`a`** — emulador Android (recomendado para el TP).
 - **QR** — Expo Go **SDK 57** en el celular (misma red Wi‑Fi; versión del proyecto = versión de Expo Go).
-- **`w`** — vista web en el navegador (opcional).
+- **`w`** — vista web en el navegador (opcional; el token se guarda en `sessionStorage`, no en Secure Store).
+
+**Web vs Expo Go:** en **celular o emulador** el ingreso principal es **email y contraseña** (Firebase). En **web** (`w`) podés usar email/contraseña y además **Continuar con Google** (`signInWithPopup`; no hace falta configurar redirect en Google Cloud). El ID token en web persiste en `sessionStorage` hasta cerrar la pestaña; en nativo va a Secure Store.
 
 Después de cambiar `babel.config.js`, reiniciá con caché limpia: `npx expo start -c`.
 
@@ -44,13 +49,32 @@ Probado en desarrollo con **emulador Android** (Windows).
 ## Estructura
 
 - `app/` — rutas (ingreso, tabs, detalle de desafío)
-- `services/api/` — cliente HTTP tipado (`x-usuario-id`)
+- `services/api/` — cliente HTTP con `Authorization: Bearer` (Firebase ID token)
+- `services/auth/` — Firebase Auth (email/contraseña; Google en web vía popup)
 - `theme/` — paleta Modern Violet (modo claro)
 - `assets/images/logo.png` — logo de marca
 
 ## Pantallas
 
-Ingreso, Inicio, Explorar, Crear, Perfil y Detalle del desafío (ranking, check-in, código).
+Ingreso con **email/contraseña** (y **Google** en web si ya te registraste con ese email), elegir alias (primer acceso), Inicio, Explorar, Crear, Perfil y Detalle del desafío.
+
+### Autenticación (Parte III)
+
+**Solo Firebase Console** (no hace falta abrir Google Cloud para email/contraseña):
+
+1. **Authentication → Sign-in method:** correo/contraseña y Google habilitados.
+2. **Authentication → Settings → Authorized domains:** incluir `localhost` (web con `w`).
+3. Recomendado: **una cuenta por dirección de email** (mismo usuario si después usás Google con el mismo mail).
+4. En `.env`: `EXPO_PUBLIC_FIREBASE_*` (ver `.env.example`).
+
+**Flujo en la app**
+
+1. **Registrate** o **ingresá** con email y contraseña.
+2. Si es tu primera vez, elegís un **alias** único antes de entrar.
+3. **Google (solo web):** botón **Continuar con Google** — el back solo acepta Google si ya existe una persona en Mongo con **el mismo email** (registro previo con contraseña). Si no, verás un mensaje para registrarte primero con email.
+4. En **Expo Go / emulador** usá email y contraseña; el hint en ingreso indica que Google está en la versión web.
+
+**Firebase vs Auth0 (TP):** Firebase con SDK JS en Expo, tier gratuito para el TP y Admin SDK en NestJS; Google cumple el requisito social del TP en web.
 
 ## Verificación manual (Parte II)
 

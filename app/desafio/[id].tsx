@@ -77,7 +77,7 @@ export default function DesafioDetalleScreen() {
           obtenerRanking(id).catch(() => ({ ranking: [] as FilaRanking[] })),
           obtenerRacha(id).catch(() => ({ rachaActual: 0, mejorRacha: 0 })),
           usuarioId
-            ? listarCheckIns(id, usuarioId, 1, 20).catch(() => ({
+            ? listarCheckIns(id, 1, 20).catch(() => ({
                 data: [] as CheckIn[],
               }))
             : Promise.resolve({ data: [] as CheckIn[] }),
