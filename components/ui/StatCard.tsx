@@ -9,12 +9,13 @@ type StatCardProps = {
   icon: keyof typeof Ionicons.glyphMap;
   value: string;
   label: string;
+  iconColor?: string;
 };
 
-export function StatCard({ icon, value, label }: StatCardProps) {
+export function StatCard({ icon, value, label, iconColor }: StatCardProps) {
   return (
     <View style={styles.card}>
-      <Ionicons name={icon} size={20} color={lightColors.primary} />
+      <Ionicons name={icon} size={22} color={iconColor ?? lightColors.primary} />
       <Text style={styles.value}>{value}</Text>
       <Text style={styles.label} numberOfLines={2}>
         {label}
@@ -36,7 +37,7 @@ const styles = StyleSheet.create({
   value: {
     ...typography.headline,
     fontFamily: 'Inter_700Bold',
-    color: lightColors.primary,
+    color: lightColors.label,
   },
   label: {
     ...typography.caption,

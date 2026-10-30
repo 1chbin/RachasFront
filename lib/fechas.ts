@@ -6,6 +6,28 @@ export function hoyCalendario(zonaHoraria: string): string {
   );
 }
 
+/** Lun = 0 … Dom = 6, según calendario en la zona dada. */
+export function weekdayIndexMondayFirst(fecha: string, zonaHoraria: string): number {
+  const weekday = new Intl.DateTimeFormat('en-US', {
+    timeZone: zonaHoraria,
+    weekday: 'short',
+  }).format(new Date(`${fecha}T12:00:00`));
+  const map: Record<string, number> = {
+    Mon: 0,
+    Tue: 1,
+    Wed: 2,
+    Thu: 3,
+    Fri: 4,
+    Sat: 5,
+    Sun: 6,
+  };
+  return map[weekday] ?? 0;
+}
+
+export function indiceDiaSemanaActual(zonaHoraria: string): number {
+  return weekdayIndexMondayFirst(hoyCalendario(zonaHoraria), zonaHoraria);
+}
+
 export function sumarDias(fecha: string, dias: number): string {
   const date = new Date(`${fecha}T12:00:00`);
   date.setDate(date.getDate() + dias);

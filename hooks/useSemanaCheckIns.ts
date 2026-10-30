@@ -1,23 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { listarCheckIns } from '@/services/api/checkIns';
-import { sumarDias, hoyCalendario } from '@/lib/fechas';
-
-function weekdayIndexMondayFirst(fecha: string, zonaHoraria: string): number {
-  const weekday = new Intl.DateTimeFormat('en-US', {
-    timeZone: zonaHoraria,
-    weekday: 'short',
-  }).format(new Date(`${fecha}T12:00:00`));
-  const map: Record<string, number> = {
-    Mon: 0,
-    Tue: 1,
-    Wed: 2,
-    Thu: 3,
-    Fri: 4,
-    Sat: 5,
-    Sun: 6,
-  };
-  return map[weekday] ?? 0;
-}
+import { hoyCalendario, sumarDias, weekdayIndexMondayFirst } from '@/lib/fechas';
 
 export function useSemanaCheckIns(
   desafioId: string | null,

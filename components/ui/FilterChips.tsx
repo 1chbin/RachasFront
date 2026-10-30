@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { lightColors } from '@/theme/light';
+import { cardShadow } from '@/theme/shadows';
 import { radius, spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
@@ -8,6 +9,7 @@ export type ChipOption<T extends string> = {
   value: T | '';
   label: string;
   left?: ReactNode;
+  renderLeft?: (active: boolean) => ReactNode;
 };
 
 type FilterChipsProps<T extends string> = {
@@ -28,12 +30,16 @@ export function FilterChips<T extends string>({
       contentContainerStyle={styles.scroll}>
       {options.map((option) => {
         const active = value === option.value;
+        const key = option.value === '' ? 'all' : option.value;
+        const leftNode = option.renderLeft
+          ? option.renderLeft(active)
+          : option.left;
         return (
           <Pressable
-            key={option.label}
+            key={key}
             onPress={() => onChange(active ? '' : option.value)}
             style={[styles.chip, active && styles.chipActive]}>
-            {option.left ? <View style={styles.left}>{option.left}</View> : null}
+            {leftNode ? <View style={styles.left}>{leftNode}</View> : null}
             <Text style={[styles.chipText, active && styles.chipTextActive]}>
               {option.label}
             </Text>
@@ -48,6 +54,7 @@ const styles = StyleSheet.create({
   scroll: {
     gap: spacing.sm,
     paddingVertical: spacing.xs,
+    paddingRight: spacing.lg,
     marginBottom: spacing.sm,
   },
   chip: {
@@ -57,13 +64,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.chip,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: lightColors.tabBarBorder,
     gap: 6,
+    ...cardShadow,
   },
   chipActive: {
-    backgroundColor: lightColors.primarySoft,
-    borderColor: lightColors.primary,
+    backgroundColor: lightColors.primary,
   },
   left: {
     marginRight: 2,
@@ -74,6 +79,6 @@ const styles = StyleSheet.create({
     color: lightColors.label,
   },
   chipTextActive: {
-    color: lightColors.primaryDark,
+    color: lightColors.primaryForeground,
   },
 });

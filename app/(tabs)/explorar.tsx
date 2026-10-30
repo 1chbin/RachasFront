@@ -23,7 +23,7 @@ import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { SearchField } from '@/components/ui/SearchField';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { TextField } from '@/components/ui/TextField';
+import { CodeSlots } from '@/components/ui/CodeSlots';
 import { useSession } from '@/context/SessionContext';
 import { useAlientoNotifications } from '@/context/AlientoNotificationsContext';
 import {
@@ -151,7 +151,13 @@ export default function ExplorarScreen() {
     ...CATEGORIAS_ORDEN.map((c) => ({
       value: c,
       label: metaCategoria(c).label,
-      left: <CategoriaIcon categoria={c} size="sm" />,
+      renderLeft: (active: boolean) => (
+        <CategoriaIcon
+          categoria={c}
+          size="sm"
+          iconColor={active ? lightColors.primaryForeground : undefined}
+        />
+      ),
     })),
   ];
 
@@ -217,14 +223,8 @@ export default function ExplorarScreen() {
         onClose={() => setModalCodigo(false)}
         size="compact">
         <Text style={styles.modalTitle}>Código de invitación</Text>
-        <TextField
-          autoCapitalize="characters"
-          maxLength={6}
-          value={codigo}
-          onChangeText={setCodigo}
-          placeholder="ABC123"
-          style={styles.modalInput}
-        />
+        <Text style={styles.modalSubtitle}>Ingresá las 6 letras o números</Text>
+        <CodeSlots value={codigo} onChange={setCodigo} />
         <View style={styles.modalActions}>
           <GradientButton
             label="Unirme"
@@ -285,9 +285,11 @@ const styles = StyleSheet.create({
   modalTitle: {
     ...typography.title2,
     fontFamily: 'Inter_700Bold',
-    marginBottom: spacing.md,
+    marginBottom: spacing.xs,
   },
-  modalInput: {
+  modalSubtitle: {
+    ...typography.footnote,
+    color: lightColors.labelSecondary,
     marginBottom: spacing.md,
   },
   modalActions: {

@@ -1,16 +1,22 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { lightColors } from '@/theme/light';
-import { minTouchTarget, radius } from '@/theme/spacing';
+import { minTouchTarget, radius, spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
 type GradientButtonProps = {
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  compact?: boolean;
 };
 
-export function GradientButton({ label, onPress, disabled }: GradientButtonProps) {
+export function GradientButton({
+  label,
+  onPress,
+  disabled,
+  compact,
+}: GradientButtonProps) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -29,7 +35,7 @@ export function GradientButton({ label, onPress, disabled }: GradientButtonProps
         }
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.gradient}>
+        style={[styles.gradient, compact && styles.gradientCompact]}>
         <Text style={styles.label}>{label}</Text>
       </LinearGradient>
     </Pressable>
@@ -47,6 +53,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 20,
     paddingVertical: 14,
+  },
+  gradientCompact: {
+    minHeight: minTouchTarget,
+    paddingVertical: 10,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.lg,
   },
   label: {
     ...typography.headline,

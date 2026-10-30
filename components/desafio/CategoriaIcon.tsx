@@ -6,9 +6,10 @@ import type { CategoriaDesafio } from '@/types/api';
 
 type CategoriaIconProps = {
   categoria: CategoriaDesafio;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
   showLabel?: boolean;
   align?: 'center' | 'start';
+  iconColor?: string;
 };
 
 export function CategoriaIcon({
@@ -16,19 +17,28 @@ export function CategoriaIcon({
   size = 'md',
   showLabel = false,
   align = 'center',
+  iconColor,
 }: CategoriaIconProps) {
   const meta = metaCategoria(categoria);
-  const dim = size === 'sm' ? 32 : 40;
-  const iconSize = size === 'sm' ? 16 : 20;
+  const dim = size === 'sm' ? 32 : size === 'lg' ? 52 : 40;
+  const iconSize = size === 'sm' ? 16 : size === 'lg' ? 24 : 20;
+  const showRing = size === 'lg';
 
   return (
     <View style={[styles.wrap, align === 'start' && styles.wrapStart]}>
       <View
         style={[
           styles.circle,
-          { width: dim, height: dim, borderRadius: dim / 2, backgroundColor: meta.soft },
+          {
+            width: dim,
+            height: dim,
+            borderRadius: dim / 2,
+            backgroundColor: meta.soft,
+            borderWidth: showRing ? 1.5 : 0,
+            borderColor: showRing ? `${meta.tint}30` : 'transparent',
+          },
         ]}>
-        <Ionicons name={meta.icon} size={iconSize} color={meta.tint} />
+        <Ionicons name={meta.icon} size={iconSize} color={iconColor ?? meta.tint} />
       </View>
       {showLabel ? (
         <Text style={styles.label} numberOfLines={1}>

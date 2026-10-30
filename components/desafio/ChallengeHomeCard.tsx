@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CategoriaIcon } from '@/components/desafio/CategoriaIcon';
+import { CheckInRowButton } from '@/components/home/CheckInRowButton';
 import { BadgeEstado } from '@/components/ui/BadgeEstado';
-import { GradientButton } from '@/components/ui/GradientButton';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { metaCategoria } from '@/lib/categorias';
 import {
@@ -39,47 +39,48 @@ export function ChallengeHomeCard({
     Math.max(0, diferenciaDiasCalendario(desafio.fechaInicio, hoy) + 1),
   );
   const progress = totalDias > 0 ? transcurridos / totalDias : 0;
+  const showCheckIn = desafio.estado === 'ACTIVO' && !item.checkInHoy;
+  const showDone = item.checkInHoy;
 
   return (
     <View style={styles.card}>
       <Pressable
         onPress={onPress}
         style={({ pressed }) => [pressed && styles.pressed]}>
-      <View style={styles.header}>
-        <View style={[styles.iconWrap, { backgroundColor: meta.soft }]}>
-          <CategoriaIcon categoria={desafio.categoria} size="sm" align="start" />
+        <View style={styles.headerRow}>
+          <CategoriaIcon categoria={desafio.categoria} size="lg" align="start" />
+          <View style={styles.body}>
+            <View style={styles.titleRow}>
+              <Text style={styles.title} numberOfLines={2}>
+                {desafio.nombre}
+              </Text>
+              <BadgeEstado estado={desafio.estado} />
+            </View>
+            <Text style={styles.categoria}>{meta.label}</Text>
+          </View>
         </View>
-        <View style={styles.titleBlock}>
-          <Text style={styles.title} numberOfLines={2}>{desafio.nombre}</Text>
-          <Text style={styles.categoria}>{meta.label}</Text>
+        <View style={styles.progressRow}>
+          <ProgressBar progress={progress} height={12} />
+          <Text style={styles.fraction}>
+            {transcurridos}/{totalDias}
+          </Text>
         </View>
-        <BadgeEstado estado={desafio.estado} />
-      </View>
-      <View style={styles.progressRow}>
-        <ProgressBar progress={progress} />
-        <Text style={styles.fraction}>
-          {transcurridos}/{totalDias}
-        </Text>
-      </View>
-      <View style={styles.metrics}>
-        <Text style={styles.metric}>Racha {item.rachaActual}</Text>
-        <Text style={styles.metric}>#{item.posicion}</Text>
-        <Text style={styles.metric}>{item.puntosTotales} pts</Text>
-      </View>
       </Pressable>
-      <GradientButton
-        label={
-          item.checkInHoy
-            ? 'Check-in de hoy hecho'
-            : checkInLoading
-              ? 'Registrando…'
-              : 'Check-in de hoy'
-        }
-        onPress={onCheckIn}
-        disabled={
-          item.checkInHoy || desafio.estado !== 'ACTIVO' || checkInLoading
-        }
-      />
+
+      {showCheckIn || showDone ? (
+        <View style={styles.actionZone}>
+          <View style={styles.separator} />
+          {showDone ? (
+            <Text style={styles.doneToday}>Check-in de hoy listo</Text>
+          ) : (
+            <CheckInRowButton
+              label={checkInLoading ? 'Registrando…' : 'Check-in de hoy'}
+              onPress={onCheckIn}
+              disabled={checkInLoading}
+            />
+          )}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -95,26 +96,27 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.96,
-    transform: [{ scale: 0.98 }],
+    transform: [{ scale: 0.99 }],
   },
-  header: {
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  body: {
+    flex: 1,
+    gap: 4,
+    paddingTop: 2,
+  },
+  titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
   },
-  iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  titleBlock: {
-    flex: 1,
-    gap: 2,
-  },
   title: {
     ...typography.headline,
+    flex: 1,
     fontFamily: 'Inter_700Bold',
   },
   categoria: {
@@ -130,16 +132,21 @@ const styles = StyleSheet.create({
     ...typography.footnote,
     fontFamily: 'Inter_600SemiBold',
     color: lightColors.primary,
-    minWidth: 36,
+    minWidth: 40,
     textAlign: 'right',
   },
-  metrics: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  actionZone: {
+    gap: spacing.md,
   },
-  metric: {
-    ...typography.caption,
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: lightColors.separator,
+  },
+  doneToday: {
+    ...typography.subhead,
     fontFamily: 'Inter_600SemiBold',
-    color: lightColors.labelSecondary,
+    color: lightColors.success,
+    textAlign: 'center',
+    paddingVertical: spacing.sm,
   },
 });

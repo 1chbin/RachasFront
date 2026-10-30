@@ -14,7 +14,7 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { useSession } from '@/context/SessionContext';
 import { useResumenInicio } from '@/hooks/useResumenInicio';
 import { useSemanaCheckIns } from '@/hooks/useSemanaCheckIns';
-import { hoyCalendario } from '@/lib/fechas';
+import { hoyCalendario, indiceDiaSemanaActual } from '@/lib/fechas';
 import { mensajeErrorAmigable } from '@/lib/errors';
 import { registrarCheckIn } from '@/services/api/checkIns';
 import { lightColors } from '@/theme/light';
@@ -51,6 +51,7 @@ export default function InicioScreen() {
   );
 
   const primerNombre = usuario?.nombre?.split(' ')[0] ?? 'Rachero';
+  const todayIndex = indiceDiaSemanaActual(zona);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -97,8 +98,13 @@ export default function InicioScreen() {
           <Text style={styles.greeting}>¡Hola, {primerNombre}!</Text>
           <Text style={styles.subtitle}>Seguí con constancia ✨</Text>
 
-          {items.length > 0 ? (
-            <StreakHeroCard racha={mejorRacha} activeDays={activeDays} />
+          {items.length > 0 && desafioDestacado ? (
+            <StreakHeroCard
+              racha={mejorRacha}
+              activeDays={activeDays}
+              todayIndex={todayIndex}
+              onPress={() => router.push(`/desafio/${desafioDestacado}`)}
+            />
           ) : null}
 
           {error ? <ErrorState message={error} onRetry={recargar} /> : null}

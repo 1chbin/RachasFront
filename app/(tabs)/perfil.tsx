@@ -1,11 +1,21 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { AchievementBadge } from '@/components/perfil/AchievementBadge';
+import { CategoriaIcon } from '@/components/desafio/CategoriaIcon';
 import { AppHeader } from '@/components/ui/AppHeader';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { GradientButton } from '@/components/ui/GradientButton';
+import { ListRow } from '@/components/ui/ListRow';
 import { LoadingView } from '@/components/ui/LoadingView';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -20,9 +30,17 @@ import { listarMisDesafios } from '@/services/api/desafios';
 import { actualizarUsuario } from '@/services/api/usuarios';
 import { obtenerRanking } from '@/services/api/ranking';
 import { lightColors } from '@/theme/light';
+import { cardShadow } from '@/theme/shadows';
 import { radius, spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 import type { DesafioResumen } from '@/types/api';
+
+function etiquetaZonaHoraria(iana: string): string {
+  const segment = iana.split('/').pop() ?? iana;
+  return segment.replace(/_/g, ' ');
+}
+
+type EditField = 'nombre' | 'zonaHoraria' | null;
 
 export default function PerfilScreen() {
   const { usuario, usuarioId, refrescarUsuario, cerrarSesion } = useSession();
@@ -36,6 +54,8 @@ export default function PerfilScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [editField, setEditField] = useState<EditField>(null);
+  const [draft, setDraft] = useState('');
 
   const inicial = usuario?.alias?.charAt(0).toUpperCase() ?? '?';
 
@@ -63,7 +83,7 @@ export default function PerfilScreen() {
             const fila = ranking.ranking.find((r) => r.usuarioId === usuarioId);
             const texto = fila
               ? `Puesto #${fila.posicion} · ${fila.puntosTotales} pts`
-              : 'Sin ranking';
+              : 'Finalizado';
             return { desafio, resultado: texto };
           } catch {
             return { desafio, resultado: 'Finalizado' };
@@ -96,12 +116,32 @@ export default function PerfilScreen() {
     [mejorRacha, finalizados.length, activos],
   );
 
-  const guardar = async () => {
-    if (!usuarioId) return;
+  const abrirEdicion = (field: Exclude<EditField, null>) => {
+    setEditField(field);
+    setDraft(field === 'nombre' ? nombre : zonaHoraria);
+  };
+
+  const guardarCampo = async () => {
+    if (!usuarioId || !editField) return;
+    const payload =
+      editField === 'nombre'
+        ? { nombre: draft.trim(), zonaHoraria }
+        : { nombre, zonaHoraria: draft.trim() };
+    if (editField === 'nombre' && !payload.nombre) {
+      alert('El nombre no puede estar vacío.');
+      return;
+    }
+    if (editField === 'zonaHoraria' && !payload.zonaHoraria) {
+      alert('Ingresá una zona horaria IANA válida.');
+      return;
+    }
     setGuardando(true);
     try {
-      await actualizarUsuario({ nombre, zonaHoraria });
+      await actualizarUsuario(payload);
+      if (editField === 'nombre') setNombre(payload.nombre);
+      else setZonaHoraria(payload.zonaHoraria);
       await refrescarUsuario();
+      setEditField(null);
     } catch (err) {
       alert(mensajeErrorAmigable(err));
     } finally {
@@ -122,20 +162,33 @@ export default function PerfilScreen() {
         <AppHeader title="Perfil" rightIcon="settings" />
 
         <View style={styles.avatarWrap}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{inicial}</Text>
+          <View style={styles.avatarRing}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{inicial}</Text>
+            </View>
           </View>
           <Text style={styles.alias}>@{usuario?.alias}</Text>
         </View>
 
         <View style={styles.statsRow}>
-          <StatCard icon="flame" value={String(mejorRacha)} label="días de racha" />
+          <StatCard
+            icon="flame"
+            iconColor={lightColors.streak}
+            value={String(mejorRacha)}
+            label="días de racha"
+          />
           <StatCard
             icon="trophy"
+            iconColor="#EAB308"
             value={String(finalizados.length)}
             label="completados"
           />
-          <StatCard icon="flash" value={String(activos)} label="activos" />
+          <StatCard
+            icon="flash"
+            iconColor={lightColors.primary}
+            value={String(activos)}
+            label="activos"
+          />
         </View>
 
         <SectionHeader title="Logros" />
@@ -144,38 +197,50 @@ export default function PerfilScreen() {
             Seguí participando para desbloquear insignias.
           </Text>
         ) : (
-          <View style={styles.logrosGrid}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.logrosRow}>
             {logros.map((logro) => (
               <AchievementBadge key={logro.id} logro={logro} />
             ))}
-          </View>
+          </ScrollView>
         )}
 
         {error ? <ErrorState message={error} onRetry={cargar} /> : null}
 
         <SectionHeader title="Tu cuenta" />
-        <SurfaceCard>
-          <TextField grouped value={nombre} onChangeText={setNombre} placeholder="Nombre" />
-          <View style={styles.divider} />
-          <TextField
-            grouped
-            value={usuario?.email ?? ''}
-            editable={false}
-            placeholder="Email"
+        <SurfaceCard style={styles.accountCard}>
+          <ListRow
+            title={nombre || 'Sin nombre'}
+            left={
+              <View style={styles.rowIcon}>
+                <Ionicons name="person-outline" size={20} color={lightColors.primary} />
+              </View>
+            }
+            onPress={() => abrirEdicion('nombre')}
           />
-          <View style={styles.divider} />
-          <TextField
-            grouped
-            value={zonaHoraria}
-            onChangeText={setZonaHoraria}
-            placeholder="Zona horaria IANA"
+          <ListRow
+            title={usuario?.email ?? '—'}
+            left={
+              <View style={styles.rowIcon}>
+                <Ionicons name="mail-outline" size={20} color={lightColors.primary} />
+              </View>
+            }
+            showChevron={false}
+          />
+          <ListRow
+            title={etiquetaZonaHoraria(zonaHoraria)}
+            subtitle={zonaHoraria}
+            isLast
+            left={
+              <View style={styles.rowIcon}>
+                <Ionicons name="globe-outline" size={20} color={lightColors.primary} />
+              </View>
+            }
+            onPress={() => abrirEdicion('zonaHoraria')}
           />
         </SurfaceCard>
-        <PrimaryButton
-          label="Guardar cambios"
-          onPress={guardar}
-          disabled={guardando}
-        />
 
         <SectionHeader title="Desafíos finalizados" />
         {finalizados.length === 0 ? (
@@ -186,6 +251,9 @@ export default function PerfilScreen() {
               key={desafio.id}
               onPress={() => router.push(`/desafio/${desafio.id}`)}
               style={styles.finishedCard}>
+              <View style={styles.finishedIcon}>
+                <CategoriaIcon categoria={desafio.categoria} size="sm" />
+              </View>
               <View style={styles.finishedBody}>
                 <Text style={styles.finishedTitle}>{desafio.nombre}</Text>
                 <Text style={styles.finishedSub}>{resultado}</Text>
@@ -195,8 +263,45 @@ export default function PerfilScreen() {
           ))
         )}
 
-        <PrimaryButton label="Cerrar sesión" variant="danger" onPress={salir} />
+        <View style={styles.logoutWrap}>
+          <PrimaryButton label="Cerrar sesión" variant="danger" onPress={salir} />
+        </View>
       </ScrollView>
+
+      <BottomSheet
+        visible={editField !== null}
+        onClose={() => setEditField(null)}
+        size="compact">
+        <Text style={styles.sheetTitle}>
+          {editField === 'nombre' ? 'Nombre' : 'Zona horaria'}
+        </Text>
+        <TextField
+          value={draft}
+          onChangeText={setDraft}
+          placeholder={
+            editField === 'nombre' ? 'Tu nombre' : 'America/Argentina/Buenos_Aires'
+          }
+          autoCapitalize={editField === 'nombre' ? 'words' : 'none'}
+          style={styles.sheetField}
+        />
+        {editField === 'zonaHoraria' ? (
+          <Text style={styles.sheetHint}>
+            Usá el identificador IANA (ej. America/Argentina/Buenos_Aires).
+          </Text>
+        ) : null}
+        <View style={styles.sheetActions}>
+          <GradientButton
+            label={guardando ? 'Guardando…' : 'Guardar'}
+            onPress={guardarCampo}
+            disabled={guardando}
+          />
+          <PrimaryButton
+            label="Cancelar"
+            variant="secondary"
+            onPress={() => setEditField(null)}
+          />
+        </View>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -215,13 +320,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     gap: spacing.sm,
   },
+  avatarRing: {
+    padding: 4,
+    borderRadius: 52,
+    backgroundColor: lightColors.primarySoft,
+  },
   avatar: {
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: lightColors.primarySoft,
+    backgroundColor: lightColors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+    ...cardShadow,
   },
   avatarText: {
     fontSize: 32,
@@ -230,30 +341,35 @@ const styles = StyleSheet.create({
   },
   alias: {
     ...typography.title2,
-    fontFamily: 'Inter_600SemiBold',
-    color: lightColors.labelSecondary,
+    fontFamily: 'Inter_700Bold',
+    color: lightColors.label,
   },
   statsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
     marginBottom: spacing.lg,
   },
-  logrosGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
+  logrosRow: {
+    gap: spacing.md,
+    paddingBottom: spacing.lg,
+  },
+  accountCard: {
+    padding: 0,
     marginBottom: spacing.lg,
   },
   emptyLogros: {
     ...typography.subhead,
     marginBottom: spacing.lg,
     textAlign: 'center',
+    color: lightColors.labelSecondary,
   },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: lightColors.separator,
-    marginVertical: spacing.sm,
+  rowIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: lightColors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   empty: {
     ...typography.body,
@@ -268,6 +384,16 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     padding: spacing.lg,
     marginBottom: spacing.sm,
+    gap: spacing.md,
+    ...cardShadow,
+  },
+  finishedIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: lightColors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   finishedBody: {
     flex: 1,
@@ -280,5 +406,24 @@ const styles = StyleSheet.create({
   finishedSub: {
     ...typography.footnote,
     color: lightColors.labelSecondary,
+  },
+  logoutWrap: {
+    marginTop: spacing.xl,
+  },
+  sheetTitle: {
+    ...typography.title2,
+    fontFamily: 'Inter_700Bold',
+    marginBottom: spacing.md,
+  },
+  sheetField: {
+    marginBottom: spacing.sm,
+  },
+  sheetHint: {
+    ...typography.footnote,
+    color: lightColors.labelSecondary,
+    marginBottom: spacing.md,
+  },
+  sheetActions: {
+    gap: spacing.sm,
   },
 });
