@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import type { CheckIn, FilaRanking } from '@/types/api';
 import { REALTIME_EVENT } from '@/services/realtime/realtimeEvents';
 import {
-  desuscribirDesafio,
   ensureSocketConnected,
   getSocket,
   resuscribirDesafio,
@@ -147,7 +146,6 @@ export function useDesafioRealtime(
       teardown = () => {
         socket.io.off('reconnect', onReconnect);
         detachListeners(socket);
-        void desuscribirDesafio(desafioId);
       };
 
       if (cancelled) {

@@ -13,6 +13,7 @@ import { CATEGORIAS_ORDEN, metaCategoria } from '@/lib/categorias';
 import { mensajeErrorAmigable } from '@/lib/errors';
 import { sumarDias, hoyCalendario, validarRangoDesafio } from '@/lib/fechas';
 import { crearDesafio } from '@/services/api/desafios';
+import { useAlientoNotifications } from '@/context/AlientoNotificationsContext';
 import { useSession } from '@/context/SessionContext';
 import { lightColors } from '@/theme/light';
 import { spacing } from '@/theme/spacing';
@@ -21,6 +22,7 @@ import type { CategoriaDesafio } from '@/types/api';
 
 export default function CrearScreen() {
   const { usuario } = useSession();
+  const { refrescarSuscripcionesAliento } = useAlientoNotifications();
   const hoy = hoyCalendario(usuario?.zonaHoraria ?? 'America/Argentina/Buenos_Aires');
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -54,6 +56,7 @@ export default function CrearScreen() {
         fechaFin,
         maxParticipantes: Number(maxParticipantes),
       });
+      await refrescarSuscripcionesAliento();
       router.push(`/desafio/${desafio.id}`);
     } catch (err) {
       alert(mensajeErrorAmigable(err));

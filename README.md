@@ -40,6 +40,10 @@ npx expo start
 
 **Web vs Expo Go:** en **celular o emulador** el ingreso principal es **email y contraseña** (Firebase). En **web** (`w`) podés usar email/contraseña y además **Continuar con Google** (`signInWithPopup`; no hace falta configurar redirect en Google Cloud). El ID token en web persiste en `sessionStorage` hasta cerrar la pestaña; en nativo va a Secure Store.
 
+### Alientos (Parte III — Consigna C)
+
+En el **detalle del desafío**, tocá el corazón junto a otro participante en el ranking y elegí un emoji. Al **recibir** un aliento: overlay animado al **centro** si tenés abierto ese desafío; **toast animado arriba** en el resto de la app (tabs, otro desafío, etc.). La app se suscribe por WebSocket a tus desafíos vigentes al iniciar sesión. No hay historial: los alientos no se guardan. Probá con **dos sesiones** en el mismo desafío.
+
 Después de cambiar `babel.config.js` o `metro.config.js`, reiniciá con caché limpia: `npx expo start -c`.
 
 ### No veo nada en el navegador (pantalla negra)

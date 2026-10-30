@@ -163,3 +163,29 @@ export async function resuscribirDesafio(
   }
   return suscribirDesafio(desafioId);
 }
+
+export async function enviarAliento(input: {
+  desafioId: string;
+  destinatarioUsuarioId: string;
+  emojiId: string;
+}): Promise<SuscribirAck> {
+  const instance = await ensureSocketConnected();
+  if (!instance) {
+    return { ok: false, message: 'No hay sesión activa' };
+  }
+
+  const suscripcion = await suscribirDesafio(input.desafioId);
+  if (!suscripcion.ok) {
+    return suscripcion;
+  }
+
+  return new Promise((resolve) => {
+    instance.emit(
+      REALTIME_EVENT.ALIENTO_ENVIAR,
+      input,
+      (ack: SuscribirAck | undefined) => {
+        resolve(ack ?? { ok: false, message: 'Sin respuesta del servidor' });
+      },
+    );
+  });
+}

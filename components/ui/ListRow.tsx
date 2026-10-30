@@ -13,6 +13,7 @@ type ListRowProps = {
   highlight?: boolean;
   isLast?: boolean;
   left?: React.ReactNode;
+  trailing?: React.ReactNode;
 };
 
 export function ListRow({
@@ -24,6 +25,7 @@ export function ListRow({
   highlight = false,
   isLast = false,
   left,
+  trailing,
 }: ListRowProps) {
   const content = (
     <>
@@ -39,7 +41,8 @@ export function ListRow({
         ) : null}
       </View>
       {detail ? <Text style={styles.detail}>{detail}</Text> : null}
-      {showChevron && onPress ? (
+      {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
+      {showChevron && onPress && !trailing ? (
         <Ionicons name="chevron-forward" size={18} color={lightColors.muted} />
       ) : null}
     </>
@@ -108,5 +111,8 @@ const styles = StyleSheet.create({
     ...typography.subhead,
     color: lightColors.muted,
     fontFamily: 'Inter_600SemiBold',
+  },
+  trailing: {
+    marginLeft: spacing.xs,
   },
 });

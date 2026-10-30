@@ -25,6 +25,7 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { TextField } from '@/components/ui/TextField';
 import { useSession } from '@/context/SessionContext';
+import { useAlientoNotifications } from '@/context/AlientoNotificationsContext';
 import {
   CATEGORIAS_ORDEN,
   ESTADOS_ORDEN,
@@ -41,6 +42,7 @@ import type { CategoriaDesafio, DesafioResumen, EstadoDesafio } from '@/types/ap
 
 export default function ExplorarScreen() {
   const { usuario } = useSession();
+  const { refrescarSuscripcionesAliento } = useAlientoNotifications();
   const hoy = hoyCalendario(
     usuario?.zonaHoraria ?? 'America/Argentina/Buenos_Aires',
   );
@@ -130,6 +132,7 @@ export default function ExplorarScreen() {
       const res = await unirseDesafio(codigo.trim().toUpperCase());
       setModalCodigo(false);
       setCodigo('');
+      await refrescarSuscripcionesAliento();
       router.push(`/desafio/${res.desafio.id}`);
     } catch (err) {
       alert(mensajeErrorAmigable(err));

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -10,6 +10,8 @@ import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { CategoriaIcon } from '@/components/desafio/CategoriaIcon';
+import { AlientoPickerOverlay } from '@/components/desafio/AlientoPickerModal';
+import { AlientoCenterOverlayContent } from '@/components/aliento/AlientoCenterOverlay';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { BadgeEstado } from '@/components/ui/BadgeEstado';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -20,6 +22,10 @@ import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { TextField } from '@/components/ui/TextField';
 import { StreakBurst } from '@/components/streak/StreakBurst';
 import { useSession } from '@/context/SessionContext';
+import {
+  useAlientoCenterForDesafio,
+  useAlientoNotifications,
+} from '@/context/AlientoNotificationsContext';
 import { metaCategoria } from '@/lib/categorias';
 import { hoyCalendario, textoTiempoDesafio } from '@/lib/fechas';
 import { mensajeErrorAmigable } from '@/lib/errors';
@@ -36,6 +42,8 @@ import {
 } from '@/services/api/checkIns';
 import { obtenerRanking, obtenerRacha } from '@/services/api/ranking';
 import { useDesafioRealtime } from '@/hooks/useDesafioRealtime';
+import type { AlientoEmojiId } from '@/lib/alientoEmojis';
+import { enviarAliento } from '@/services/realtime/socketClient';
 import { lightColors } from '@/theme/light';
 import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -44,6 +52,8 @@ import type { CheckIn, DesafioResumen, FilaRanking } from '@/types/api';
 export default function DesafioDetalleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { usuario, usuarioId } = useSession();
+  const { refrescarSuscripcionesAliento } = useAlientoNotifications();
+  const alientoCenter = useAlientoCenterForDesafio(id);
   const [desafio, setDesafio] = useState<DesafioResumen | null>(null);
   const [ranking, setRanking] = useState<FilaRanking[]>([]);
   const [racha, setRacha] = useState({ rachaActual: 0, mejorRacha: 0 });
@@ -61,6 +71,11 @@ export default function DesafioDetalleScreen() {
   const [sheetOpen, setSheetOpen] = useState(true);
   const [avisoRealtime, setAvisoRealtime] = useState<string | null>(null);
   const avisoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [alientoDestino, setAlientoDestino] = useState<{
+    usuarioId: string;
+    alias: string;
+  } | null>(null);
+  const [errorAliento, setErrorAliento] = useState<string | null>(null);
 
   const mostrarAvisoRealtime = useCallback((texto: string) => {
     if (avisoTimerRef.current) {
@@ -80,6 +95,31 @@ export default function DesafioDetalleScreen() {
       }
     };
   }, []);
+
+  const enviarAlientoA = useCallback(
+    async (emojiId: AlientoEmojiId) => {
+      if (!id || !alientoDestino) return;
+      setErrorAliento(null);
+      setMutando(true);
+      try {
+        const ack = await enviarAliento({
+          desafioId: id,
+          destinatarioUsuarioId: alientoDestino.usuarioId,
+          emojiId,
+        });
+        if (!ack.ok) {
+          setErrorAliento(ack.message);
+          alert(ack.message);
+          return;
+        }
+        setAlientoDestino(null);
+        setErrorAliento(null);
+      } finally {
+        setMutando(false);
+      }
+    },
+    [id, alientoDestino],
+  );
 
   const cerrarSheet = () => {
     setSheetOpen(false);
@@ -135,14 +175,63 @@ export default function DesafioDetalleScreen() {
     onDesafioCancelado: () => {
       void cargar(true);
     },
+    onSuscripcionError: (message) => {
+      mostrarAvisoRealtime(message);
+    },
   });
 
   useFocusEffect(
     useCallback(() => {
       setSheetOpen(true);
+      void refrescarSuscripcionesAliento();
       cargar(false);
-    }, [cargar]),
+    }, [cargar, refrescarSuscripcionesAliento]),
   );
+
+  useEffect(() => {
+    if (alientoCenter.visible) {
+      setAlientoDestino(null);
+      setErrorAliento(null);
+    }
+  }, [alientoCenter.visible]);
+
+  const sheetOverlay = useMemo(() => {
+    if (alientoCenter.visible) {
+      return (
+        <AlientoCenterOverlayContent
+          emoji={alientoCenter.emoji}
+          remitenteAlias={alientoCenter.remitenteAlias}
+          onDismiss={alientoCenter.dismiss}
+        />
+      );
+    }
+    if (alientoDestino) {
+      return (
+        <AlientoPickerOverlay
+          destinatarioAlias={alientoDestino.alias}
+          disabled={mutando}
+          errorMessage={errorAliento}
+          onClose={() => {
+            setAlientoDestino(null);
+            setErrorAliento(null);
+          }}
+          onSelect={(emojiId) => {
+            void enviarAlientoA(emojiId);
+          }}
+        />
+      );
+    }
+    return null;
+  }, [
+    alientoCenter.visible,
+    alientoCenter.emoji,
+    alientoCenter.remitenteAlias,
+    alientoCenter.dismiss,
+    alientoDestino,
+    mutando,
+    errorAliento,
+    enviarAlientoA,
+  ]);
 
   const copiarCodigo = async () => {
     if (desafio?.codigoInvitacion) {
@@ -308,6 +397,8 @@ export default function DesafioDetalleScreen() {
     }
 
     const esCreador = desafio.creadorId === usuarioId;
+    const puedeAlentar =
+      desafio.estado === 'ACTIVO' || desafio.estado === 'PROGRAMADO';
 
     return (
       <>
@@ -372,16 +463,46 @@ export default function DesafioDetalleScreen() {
               <Text style={styles.empty}>Sin datos de ranking todavía.</Text>
             </View>
           ) : (
-            ranking.map((fila, index) => (
-              <ListRow
-                key={fila.usuarioId}
-                title={`@${fila.alias}`}
-                subtitle={`Racha ${fila.rachaActual}`}
-                detail={`${fila.puntosTotales} pts`}
-                highlight={fila.usuarioId === usuarioId}
-                isLast={index === ranking.length - 1}
-              />
-            ))
+            ranking.map((fila, index) => {
+              const esYo = fila.usuarioId === usuarioId;
+              const mostrarBotonAliento = puedeAlentar && !esYo;
+              return (
+                <ListRow
+                  key={fila.usuarioId}
+                  title={`@${fila.alias}`}
+                  subtitle={`Racha ${fila.rachaActual}`}
+                  detail={`${fila.puntosTotales} pts`}
+                  highlight={esYo}
+                  showChevron={false}
+                  trailing={
+                    mostrarBotonAliento ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Alentar a ${fila.alias}`}
+                        hitSlop={8}
+                        onPress={() => {
+                          setErrorAliento(null);
+                          setAlientoDestino({
+                            usuarioId: fila.usuarioId,
+                            alias: fila.alias,
+                          });
+                        }}
+                        style={({ pressed }) => [
+                          styles.alientoBtn,
+                          pressed && styles.alientoBtnPressed,
+                        ]}>
+                        <Ionicons
+                          name="heart-outline"
+                          size={20}
+                          color={lightColors.primary}
+                        />
+                      </Pressable>
+                    ) : undefined
+                  }
+                  isLast={index === ranking.length - 1}
+                />
+              );
+            })
           )}
         </GroupedSection>
 
@@ -427,7 +548,8 @@ export default function DesafioDetalleScreen() {
         visible={sheetOpen}
         onClose={onSheetClosed}
         size="tall"
-        header={sheetHeader}>
+        header={sheetHeader}
+        overlay={sheetOverlay}>
         {sheetBody}
       </BottomSheet>
 
@@ -496,5 +618,16 @@ const styles = StyleSheet.create({
     ...typography.subhead,
     textAlign: 'center',
     color: lightColors.primary,
+  },
+  alientoBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: lightColors.primarySoft,
+  },
+  alientoBtnPressed: {
+    opacity: 0.7,
   },
 });

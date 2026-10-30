@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 import { SessionProvider } from '@/context/SessionContext';
+import { AlientoNotificationsProvider } from '@/context/AlientoNotificationsContext';
 import { lightColors } from '@/theme/light';
 
 SplashScreen.preventAutoHideAsync();
@@ -27,17 +28,19 @@ export default function RootLayout() {
 
   return (
     <SessionProvider>
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: lightColors.background },
-          headerTintColor: lightColors.primary,
-          contentStyle: { backgroundColor: lightColors.background },
-        }}>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="desafio" options={{ headerShown: false }} />
-      </Stack>
+      <AlientoNotificationsProvider>
+        <Stack
+          screenOptions={{
+            headerStyle: { backgroundColor: lightColors.background },
+            headerTintColor: lightColors.primary,
+            contentStyle: { backgroundColor: lightColors.background },
+          }}>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="desafio" options={{ headerShown: false }} />
+        </Stack>
+      </AlientoNotificationsProvider>
     </SessionProvider>
   );
 }

@@ -29,6 +29,7 @@ type BottomSheetProps = {
   scroll?: boolean;
   header?: ReactNode;
   children: ReactNode;
+  overlay?: ReactNode;
 };
 
 const WINDOW_HEIGHT = Dimensions.get('window').height;
@@ -45,6 +46,7 @@ export function BottomSheet({
   scroll = true,
   header,
   children,
+  overlay,
 }: BottomSheetProps) {
   const insets = useSafeAreaInsets();
   const [mounted, setMounted] = useState(visible);
@@ -150,6 +152,11 @@ export function BottomSheet({
             {body}
           </Animated.View>
         </KeyboardAvoidingView>
+        {overlay ? (
+          <View style={styles.overlayHost} pointerEvents="box-none">
+            {overlay}
+          </View>
+        ) : null}
       </View>
     </Modal>
   );
@@ -202,5 +209,10 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
+  },
+  overlayHost: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 20,
+    elevation: 20,
   },
 });
