@@ -13,6 +13,7 @@ import { signOutFirebase } from '@/services/auth/googleSignIn';
 import { router } from 'expo-router';
 import { obtenerMe } from '@/services/api/usuarios';
 import { setApiUnauthorizedHandler } from '@/services/api/client';
+import { disconnectSocket } from '@/services/realtime/socketClient';
 import type { Usuario } from '@/types/api';
 
 type SessionContextValue = {
@@ -30,6 +31,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
 
   const limpiarSesion = useCallback(async () => {
+    disconnectSocket();
     await signOutFirebase().catch(() => undefined);
     await clearStoredIdToken();
     setUsuario(null);
@@ -62,7 +64,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
     (async () => {
       const stored = await getStoredIdToken();
-      if (stored) {
+      if (!cancelled) {
+        setReady(true);
+      }
+      if (stored && !cancelled) {
         try {
           await cargarPerfil();
         } catch {
@@ -71,9 +76,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
             setUsuario(null);
           }
         }
-      }
-      if (!cancelled) {
-        setReady(true);
       }
     })();
 

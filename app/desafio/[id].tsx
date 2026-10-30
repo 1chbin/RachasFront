@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -35,6 +35,7 @@ import {
   registrarCheckIn,
 } from '@/services/api/checkIns';
 import { obtenerRanking, obtenerRacha } from '@/services/api/ranking';
+import { useDesafioRealtime } from '@/hooks/useDesafioRealtime';
 import { lightColors } from '@/theme/light';
 import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -58,6 +59,27 @@ export default function DesafioDetalleScreen() {
     to: 0,
   });
   const [sheetOpen, setSheetOpen] = useState(true);
+  const [avisoRealtime, setAvisoRealtime] = useState<string | null>(null);
+  const avisoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const mostrarAvisoRealtime = useCallback((texto: string) => {
+    if (avisoTimerRef.current) {
+      clearTimeout(avisoTimerRef.current);
+    }
+    setAvisoRealtime(texto);
+    avisoTimerRef.current = setTimeout(() => {
+      setAvisoRealtime(null);
+      avisoTimerRef.current = null;
+    }, 3500);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (avisoTimerRef.current) {
+        clearTimeout(avisoTimerRef.current);
+      }
+    };
+  }, []);
 
   const cerrarSheet = () => {
     setSheetOpen(false);
@@ -96,6 +118,24 @@ export default function DesafioDetalleScreen() {
     },
     [id, usuarioId],
   );
+
+  useDesafioRealtime(id, {
+    usuarioId,
+    onRanking: (filas) => setRanking(filas),
+    onCheckInAjeno: ({ alias }) => {
+      mostrarAvisoRealtime(`${alias} hizo su check-in`);
+      void cargar(true);
+    },
+    onReconnect: () => {
+      void cargar(true);
+    },
+    onParticipanteChange: () => {
+      void cargar(true);
+    },
+    onDesafioCancelado: () => {
+      void cargar(true);
+    },
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -271,6 +311,12 @@ export default function DesafioDetalleScreen() {
 
     return (
       <>
+        {avisoRealtime ? (
+          <View style={styles.avisoRealtime}>
+            <Text style={styles.avisoRealtimeText}>{avisoRealtime}</Text>
+          </View>
+        ) : null}
+
         {desafio.codigoInvitacion ? (
           <GroupedSection title="Invitación">
             <ListRow
@@ -438,5 +484,17 @@ const styles = StyleSheet.create({
   empty: {
     ...typography.footnote,
     textAlign: 'center',
+  },
+  avisoRealtime: {
+    backgroundColor: lightColors.primarySoft,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 10,
+    marginBottom: spacing.md,
+  },
+  avisoRealtimeText: {
+    ...typography.subhead,
+    textAlign: 'center',
+    color: lightColors.primary,
   },
 });

@@ -2,7 +2,9 @@
 
 Cliente **React Native** (Expo Router) del monorepo Rachas. Tema Modern Violet e integración con [RachasBack](../RachasBack).
 
-El proyecto usa **Expo SDK 57** para coincidir con **Expo Go 57.x** del App Store / Play Store (p. ej. 57.0.9 en iPhone). Si actualizás Expo Go a SDK 58, subí el proyecto con `expo@^58` y `npx expo install --fix`.
+El proyecto usa **Expo SDK 58** para coincidir con **Expo Go 58.x** en el celular. Tras cambiar la versión del SDK, ejecutá `npx expo install expo-asset expo-constants`, luego `npx expo install --fix` (o `npm install --legacy-peer-deps` si npm reporta conflictos de peers), borrá la carpeta `.expo`, reiniciá con `npx expo start -c` y en Expo Go **Remove** el proyecto antes de volver a escanear el QR.
+
+**Expo Go en iPhone (crash o pantalla en blanco):** no abras **React Native DevTools** contra la app en un dispositivo físico (solo mirá logs en la terminal de Metro). DevTools + recarga remota a veces deja el runtime en `runtime not ready` y errores como `ExpoAsset` / `"main" has not been registered`.
 
 Todos los comandos de esta guía se ejecutan **desde esta carpeta** (`RachasFront/`).
 
@@ -22,6 +24,8 @@ Todos los comandos de esta guía se ejecutan **desde esta carpeta** (`RachasFron
    - **Navegador web (`w`):** no hace falta cambiar el `.env` solo por web: si la URL es `10.0.2.2` o una IP `192.168.x.x`, la app en web llama al back en **`http://localhost:3000`** automáticamente. El back debe estar corriendo en tu PC (`npm run start:dev` en `RachasBack/`).
    - Override opcional: `EXPO_PUBLIC_API_URL_WEB` si el back en web no es localhost.
    - Reiniciá con `npx expo start -c` tras cambiar `.env`.
+   - **`EXPO_PUBLIC_WS_URL`:** en celular físico debe usar la **misma IP LAN y puerto 3000** que `EXPO_PUBLIC_API_URL` (no dejar `10.0.2.2` en iPhone).
+   - Si la app queda en **cargando** en Expo Go: casi siempre es API mal configurada (`10.0.2.2` en dispositivo físico) o el back apagado. Probá en Safari del celular `http://<IP-PC>:3000/usuarios/me` (401 = OK). Permití Node/firewall en red privada para el puerto 3000.
 
 ## Ejecución
 
@@ -31,12 +35,12 @@ npx expo start
 ```
 
 - **`a`** — emulador Android (recomendado para el TP).
-- **QR** — Expo Go **SDK 57** en el celular (misma red Wi‑Fi; versión del proyecto = versión de Expo Go).
+- **QR** — Expo Go **SDK 58** en el celular (misma red Wi‑Fi; versión del proyecto = versión de Expo Go).
 - **`w`** — vista web en el navegador (opcional; el token se guarda en `sessionStorage`, no en Secure Store).
 
 **Web vs Expo Go:** en **celular o emulador** el ingreso principal es **email y contraseña** (Firebase). En **web** (`w`) podés usar email/contraseña y además **Continuar con Google** (`signInWithPopup`; no hace falta configurar redirect en Google Cloud). El ID token en web persiste en `sessionStorage` hasta cerrar la pestaña; en nativo va a Secure Store.
 
-Después de cambiar `babel.config.js`, reiniciá con caché limpia: `npx expo start -c`.
+Después de cambiar `babel.config.js` o `metro.config.js`, reiniciá con caché limpia: `npx expo start -c`.
 
 ### No veo nada en el navegador (pantalla negra)
 
@@ -50,6 +54,7 @@ Probado en desarrollo con **emulador Android** (Windows).
 
 - `app/` — rutas (ingreso, tabs, detalle de desafío)
 - `services/api/` — cliente HTTP con `Authorization: Bearer` (Firebase ID token)
+- `services/realtime/` — Socket.IO (`EXPO_PUBLIC_WS_URL`, mismo host que la API por defecto)
 - `services/auth/` — Firebase Auth (email/contraseña; Google en web vía popup)
 - `theme/` — paleta Modern Violet (modo claro)
 - `assets/images/logo.png` — logo de marca

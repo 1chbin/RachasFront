@@ -198,14 +198,12 @@ export default function ExplorarScreen() {
           />
         )}
         ListEmptyComponent={
-          !error && filtrados.length === 0
-            ? (
-              <EmptyState
-                title="Sin resultados"
-                message="Probá otros filtros o creá un desafío."
-              />
-            )
-            : null
+          !error && filtrados.length === 0 ? (
+            <EmptyState
+              title="Sin resultados"
+              message="Probá otros filtros o creá un desafío."
+            />
+          ) : undefined
         }
         refreshControl={<RefreshControl refreshing={loading} onRefresh={cargar} />}
         contentContainerStyle={styles.list}

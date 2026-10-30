@@ -30,6 +30,8 @@ async function resolveAuthHeader(): Promise<string | null> {
   return refreshFirebaseIdToken();
 }
 
+const API_REQUEST_TIMEOUT_MS = 15_000;
+
 async function fetchWithAuth<T>(
   path: string,
   options: RequestOptions,
@@ -53,14 +55,32 @@ async function fetchWithAuth<T>(
   }
 
   let response: Response;
+  const requestUrl = `${baseUrl}${path}`;
+  const hostHint = baseUrl.replace(/^https?:\/\//, '');
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_REQUEST_TIMEOUT_MS);
   try {
-    response = await fetch(`${baseUrl}${path}`, {
+    response = await fetch(requestUrl, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
     });
-  } catch {
-    throw new TypeError('Network request failed');
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(
+        `Tiempo de espera agotado (${API_REQUEST_TIMEOUT_MS / 1000}s) al conectar con ${hostHint}. ¿Está corriendo RachasBack?`,
+      );
+    }
+    const detail =
+      error instanceof Error && error.message
+        ? error.message
+        : 'Network request failed';
+    throw new Error(
+      `No se pudo conectar con ${hostHint}: ${detail}. ¿Está corriendo RachasBack en el puerto 3000?`,
+    );
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   if (auth && response.status === 401 && retryOn401) {

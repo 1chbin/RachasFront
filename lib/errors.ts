@@ -23,7 +23,10 @@ export function mensajeErrorAmigable(error: unknown): string {
     }
   }
   if (error instanceof TypeError) {
-    return 'No pudimos conectar con el servidor. Revisá que el back esté encendido y la URL de la API.';
+    return 'No se pudo conectar al servidor. ¿Está corriendo RachasBack en el puerto 3000?';
+  }
+  if (error instanceof Error && error.message === 'Network request failed') {
+    return 'No se pudo conectar al servidor. ¿Está corriendo RachasBack en el puerto 3000?';
   }
   if (error instanceof Error) {
     return error.message;
