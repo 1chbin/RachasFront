@@ -1,3 +1,6 @@
+import { getApiBaseUrl } from '@/lib/apiBaseUrl';
+import { connectionHelpMessage } from '@/lib/serverConfig';
+
 export class ApiError extends Error {
   status: number;
 
@@ -23,10 +26,10 @@ export function mensajeErrorAmigable(error: unknown): string {
     }
   }
   if (error instanceof TypeError) {
-    return 'No se pudo conectar al servidor. ¿Está corriendo RachasBack en el puerto 3000?';
+    return connectionHelpMessage(getApiBaseUrl());
   }
   if (error instanceof Error && error.message === 'Network request failed') {
-    return 'No se pudo conectar al servidor. ¿Está corriendo RachasBack en el puerto 3000?';
+    return connectionHelpMessage(getApiBaseUrl());
   }
   if (error instanceof Error) {
     return error.message;

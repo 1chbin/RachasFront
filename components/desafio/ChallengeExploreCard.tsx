@@ -25,11 +25,11 @@ export function ChallengeExploreCard({
   onPress,
 }: ChallengeExploreCardProps) {
   const meta = metaCategoria(desafio.categoria);
-  const progreso = progresoDesafio(desafio.fechaInicio, desafio.fechaFin, hoy);
+  const progreso = progresoDesafio(desafio.fechaInicio, desafio.finalizaEn, hoy);
   const tiempo = textoTiempoDesafio(
     desafio.estado,
     desafio.fechaInicio,
-    desafio.fechaFin,
+    desafio.finalizaEn,
     hoy,
   );
   const mostrarProgreso =

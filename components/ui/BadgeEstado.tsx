@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { etiquetaEstadoDesafio } from '@/lib/dominioUi';
 import { estadoBadgeColors, lightColors } from '@/theme/light';
 import { radius } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -8,11 +9,12 @@ type BadgeEstadoProps = {
 };
 
 export function BadgeEstado({ estado }: BadgeEstadoProps) {
+  const label = etiquetaEstadoDesafio(estado);
   const color = estadoBadgeColors[estado] ?? lightColors.muted;
   return (
     <View style={[styles.badge, { backgroundColor: `${color}22` }]}>
       <View style={[styles.dot, { backgroundColor: color }]} />
-      <Text style={[styles.text, { color }]}>{estado}</Text>
+      <Text style={[styles.text, { color }]}>{label}</Text>
     </View>
   );
 }

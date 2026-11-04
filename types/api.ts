@@ -1,8 +1,14 @@
 export type EstadoDesafio =
   | 'PROGRAMADO'
   | 'ACTIVO'
+  | 'PAUSADO'
   | 'FINALIZADO'
   | 'CANCELADO';
+
+export type PuntosCheckIn = {
+  total: number;
+  bonusPorRacha: number;
+};
 
 export type CategoriaDesafio =
   | 'SALUD'
@@ -27,7 +33,7 @@ export interface DesafioResumen {
   categoria: CategoriaDesafio;
   estado: EstadoDesafio;
   fechaInicio: string;
-  fechaFin: string;
+  finalizaEn: string;
   maxParticipantes: number;
   creadorId: string;
   codigoInvitacion?: string;
@@ -52,7 +58,7 @@ export interface CheckIn {
   dia: string;
   nota?: string;
   valor?: number;
-  puntos: number;
+  puntos: PuntosCheckIn;
   zonaHorariaUsada: string;
 }
 

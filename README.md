@@ -24,8 +24,17 @@ Todos los comandos de esta guía se ejecutan **desde esta carpeta** (`RachasFron
    - **Navegador web (`w`):** no hace falta cambiar el `.env` solo por web: si la URL es `10.0.2.2` o una IP `192.168.x.x`, la app en web llama al back en **`http://localhost:3000`** automáticamente. El back debe estar corriendo en tu PC (`npm run start:dev` en `RachasBack/`).
    - Override opcional: `EXPO_PUBLIC_API_URL_WEB` si el back en web no es localhost.
    - Reiniciá con `npx expo start -c` tras cambiar `.env`.
-   - **`EXPO_PUBLIC_WS_URL`:** en celular físico debe usar la **misma IP LAN y puerto 3000** que `EXPO_PUBLIC_API_URL` (no dejar `10.0.2.2` en iPhone).
-   - Si la app queda en **cargando** en Expo Go: casi siempre es API mal configurada (`10.0.2.2` en dispositivo físico) o el back apagado. Probá en Safari del celular `http://<IP-PC>:3000/usuarios/me` (401 = OK). Permití Node/firewall en red privada para el puerto 3000.
+   - **`EXPO_PUBLIC_API_PORT`:** debe coincidir con `PORT` del back (default `3000`). Los defaults de emulador/web usan este puerto.
+   - **`EXPO_PUBLIC_WS_URL`:** en celular físico debe usar la **misma IP LAN y puerto** que `EXPO_PUBLIC_API_URL` (no dejar `10.0.2.2` en iPhone). Si no la definís, la app usa el mismo origin que la API.
+   - Si la app queda en **cargando** en Expo Go: casi siempre es API mal configurada (`10.0.2.2` en dispositivo físico) o el back apagado. Probá en Safari del celular `http://<IP-PC>:3000/health` (200 = OK). Permití Node/firewall en red privada para el puerto del back.
+
+### Red dev (checklist)
+
+1. En `RachasBack/`: `npm run start:dev` — la consola debe mostrar `RachasBack listening on http://localhost:<PORT>` y `GET .../health`.
+2. En la PC: abrí `http://localhost:3000/health` (o el `PORT` de tu `.env`) → debe responder 200.
+3. En el celular (misma Wi‑Fi): `http://<IP-de-Metro-sin-:8081>:3000/health` → 200. Si falla, revisá firewall de Windows (permitir Node en red privada).
+4. En `RachasFront/.env`: `EXPO_PUBLIC_API_URL=http://<esa-misma-IP>:3000` (no `10.0.2.2` en Expo Go físico). Reiniciá Expo con `npx expo start -c`.
+5. Al arrancar en dev, la app hace `GET <API>/health`; si falla, verás un banner y un aviso con la URL probada.
 
 ## Ejecución
 

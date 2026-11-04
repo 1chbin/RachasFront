@@ -23,6 +23,7 @@ export const lightColors = {
 export const estadoBadgeColors: Record<string, string> = {
   PROGRAMADO: '#8E8E93',
   ACTIVO: '#7C3AED',
+  PAUSADO: '#F59E0B',
   FINALIZADO: '#34C759',
   CANCELADO: '#FF3B30',
 };

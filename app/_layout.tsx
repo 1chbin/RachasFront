@@ -5,7 +5,10 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 import { SessionProvider } from '@/context/SessionContext';
 import { AlientoNotificationsProvider } from '@/context/AlientoNotificationsContext';
+import { AppErrorBoundary } from '@/components/system/AppErrorBoundary';
+import { DevBackReachabilityBanner } from '@/components/system/DevBackReachabilityBanner';
 import { lightColors } from '@/theme/light';
+import { View } from 'react-native';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -27,20 +30,30 @@ export default function RootLayout() {
   }, [loaded, error]);
 
   return (
-    <SessionProvider>
-      <AlientoNotificationsProvider>
-        <Stack
-          screenOptions={{
-            headerStyle: { backgroundColor: lightColors.background },
-            headerTintColor: lightColors.primary,
-            contentStyle: { backgroundColor: lightColors.background },
-          }}>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="desafio" options={{ headerShown: false }} />
-        </Stack>
-      </AlientoNotificationsProvider>
-    </SessionProvider>
+    <AppErrorBoundary pantalla="root">
+      <SessionProvider>
+        <AlientoNotificationsProvider>
+          <View style={{ flex: 1 }}>
+            <DevBackReachabilityBanner />
+            <Stack
+              style={{ flex: 1 }}
+              screenOptions={{
+              headerStyle: { backgroundColor: lightColors.background },
+              headerTintColor: lightColors.primary,
+              contentStyle: { backgroundColor: lightColors.background },
+            }}>
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="desafio" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="actualizar"
+              options={{ title: 'Actualizar', headerShown: true }}
+            />
+          </Stack>
+          </View>
+        </AlientoNotificationsProvider>
+      </SessionProvider>
+    </AppErrorBoundary>
   );
 }

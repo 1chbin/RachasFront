@@ -33,7 +33,7 @@ export function ChallengeHomeCard({
   const { desafio } = item;
   const meta = metaCategoria(desafio.categoria);
   const hoy = hoyCalendario(zonaHoraria);
-  const totalDias = diasInclusiveCalendario(desafio.fechaInicio, desafio.fechaFin);
+  const totalDias = diasInclusiveCalendario(desafio.fechaInicio, desafio.finalizaEn);
   const transcurridos = Math.min(
     totalDias,
     Math.max(0, diferenciaDiasCalendario(desafio.fechaInicio, hoy) + 1),

@@ -25,10 +25,10 @@ export function DesafioListRow({
   const tiempo = textoTiempoDesafio(
     desafio.estado,
     desafio.fechaInicio,
-    desafio.fechaFin,
+    desafio.finalizaEn,
     hoy,
   );
-  const progreso = progresoDesafio(desafio.fechaInicio, desafio.fechaFin, hoy);
+  const progreso = progresoDesafio(desafio.fechaInicio, desafio.finalizaEn, hoy);
   const mostrarProgreso =
     desafio.estado === 'ACTIVO' || desafio.estado === 'PROGRAMADO';
 

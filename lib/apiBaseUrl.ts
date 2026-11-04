@@ -1,6 +1,14 @@
-export const WEB_DEV_API = 'http://localhost:3000';
-export const ANDROID_EMULATOR_HOST = '10.0.2.2';
-export const ANDROID_DEFAULT_API = `http://${ANDROID_EMULATOR_HOST}:3000`;
+import { Platform } from 'react-native';
+import {
+  ANDROID_EMULATOR_HOST,
+  buildLocalApiUrl,
+  DEFAULT_API_PORT,
+} from './serverConfig';
+
+export { ANDROID_EMULATOR_HOST, DEFAULT_API_PORT, buildLocalApiUrl };
+
+export const WEB_DEV_API = buildLocalApiUrl('localhost');
+export const ANDROID_DEFAULT_API = buildLocalApiUrl(ANDROID_EMULATOR_HOST);
 
 function trimTrailingSlash(url: string): string {
   return url.replace(/\/$/, '');
@@ -70,4 +78,16 @@ export function resolveApiBaseUrl(input: ResolveApiBaseUrlInput): string {
   }
 
   return fromEnv ?? ANDROID_DEFAULT_API;
+}
+
+export function getApiBaseUrl(): string {
+  return resolveApiBaseUrl({
+    platformOS: Platform.OS,
+    apiUrlFromEnv: process.env.EXPO_PUBLIC_API_URL,
+    apiUrlWebFromEnv: process.env.EXPO_PUBLIC_API_URL_WEB,
+  });
+}
+
+export function describeExpectedBack(): string {
+  return getApiBaseUrl();
 }

@@ -13,6 +13,7 @@ import { CATEGORIAS_ORDEN, metaCategoria } from '@/lib/categorias';
 import { mensajeErrorAmigable } from '@/lib/errors';
 import { sumarDias, hoyCalendario, validarRangoDesafio } from '@/lib/fechas';
 import { crearDesafio } from '@/services/api/desafios';
+import { track } from '@/services/analytics/track';
 import { useAlientoNotifications } from '@/context/AlientoNotificationsContext';
 import { useSession } from '@/context/SessionContext';
 import { lightColors } from '@/theme/light';
@@ -53,9 +54,10 @@ export default function CrearScreen() {
         descripcion: descripcion || undefined,
         categoria,
         fechaInicio,
-        fechaFin,
+        finalizaEn: fechaFin,
         maxParticipantes: Number(maxParticipantes),
       });
+      await track('desafio_creado', { categoria, max_participantes: Number(maxParticipantes) });
       await refrescarSuscripcionesAliento();
       router.push(`/desafio/${desafio.id}`);
     } catch (err) {

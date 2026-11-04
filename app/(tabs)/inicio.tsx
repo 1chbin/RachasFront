@@ -17,6 +17,7 @@ import { useSemanaCheckIns } from '@/hooks/useSemanaCheckIns';
 import { hoyCalendario, indiceDiaSemanaActual } from '@/lib/fechas';
 import { mensajeErrorAmigable } from '@/lib/errors';
 import { registrarCheckIn } from '@/services/api/checkIns';
+import { track } from '@/services/analytics/track';
 import { lightColors } from '@/theme/light';
 import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -69,7 +70,11 @@ export default function InicioScreen() {
     const antes = items.find((i) => i.desafio.id === desafioId)?.rachaActual ?? 0;
     setCheckInId(desafioId);
     try {
-      await registrarCheckIn(desafioId, { dia: hoyCalendario(usuario.zonaHoraria) });
+      await registrarCheckIn(desafioId, {
+        dia: hoyCalendario(usuario.zonaHoraria),
+        zonaHoraria: usuario.zonaHoraria,
+      });
+      await track('checkin_hecho', { desafio_id: desafioId });
       const actualizados = await recargar();
       await recargarSemana();
       const nueva =

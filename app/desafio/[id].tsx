@@ -28,6 +28,7 @@ import {
 } from '@/context/AlientoNotificationsContext';
 import { metaCategoria } from '@/lib/categorias';
 import { hoyCalendario, textoTiempoDesafio } from '@/lib/fechas';
+import { puntosTotalesDeCheckIn } from '@/lib/dominioUi';
 import { mensajeErrorAmigable } from '@/lib/errors';
 import {
   abandonarDesafio,
@@ -44,6 +45,7 @@ import { obtenerRanking, obtenerRacha } from '@/services/api/ranking';
 import { useDesafioRealtime } from '@/hooks/useDesafioRealtime';
 import type { AlientoEmojiId } from '@/lib/alientoEmojis';
 import { enviarAliento } from '@/services/realtime/socketClient';
+import { track } from '@/services/analytics/track';
 import { lightColors } from '@/theme/light';
 import { spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -251,9 +253,11 @@ export default function DesafioDetalleScreen() {
     try {
       await registrarCheckIn(id, {
         dia: hoyCalendario(usuario.zonaHoraria),
+        zonaHoraria: usuario.zonaHoraria,
         nota: nota || undefined,
         valor: valor ? Number(valor) : undefined,
       });
+      await track('checkin_hecho', { desafio_id: id });
       setNota('');
       setValor('');
       const ra = await obtenerRacha(id).catch(() => ({ rachaActual: antes, mejorRacha: 0 }));
@@ -353,7 +357,7 @@ export default function DesafioDetalleScreen() {
     const tiempo = textoTiempoDesafio(
       desafio.estado,
       desafio.fechaInicio,
-      desafio.fechaFin,
+      desafio.finalizaEn,
       hoy,
     );
 
@@ -516,7 +520,7 @@ export default function DesafioDetalleScreen() {
               <ListRow
                 key={item.id}
                 title={item.dia}
-                detail={`+${item.puntos} pts`}
+                detail={`+${puntosTotalesDeCheckIn(item.puntos)} pts`}
                 isLast={index === checkIns.length - 1}
               />
             ))

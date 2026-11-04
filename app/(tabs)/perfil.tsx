@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
@@ -27,6 +28,10 @@ import { calcularLogros } from '@/lib/logros';
 import { mensajeErrorAmigable } from '@/lib/errors';
 import { obtenerResumenInicio } from '@/services/api/inicio';
 import { listarMisDesafios } from '@/services/api/desafios';
+import {
+  getAnalyticsConsent,
+  setAnalyticsConsent,
+} from '@/services/analytics/track';
 import { actualizarUsuario } from '@/services/api/usuarios';
 import { obtenerRanking } from '@/services/api/ranking';
 import { lightColors } from '@/theme/light';
@@ -56,6 +61,11 @@ export default function PerfilScreen() {
   const [guardando, setGuardando] = useState(false);
   const [editField, setEditField] = useState<EditField>(null);
   const [draft, setDraft] = useState('');
+  const [compartirUso, setCompartirUso] = useState(true);
+
+  useEffect(() => {
+    void getAnalyticsConsent().then(setCompartirUso);
+  }, []);
 
   const inicial = usuario?.alias?.charAt(0).toUpperCase() ?? '?';
 
@@ -242,6 +252,25 @@ export default function PerfilScreen() {
           />
         </SurfaceCard>
 
+        <SectionHeader title="Privacidad" />
+        <SurfaceCard>
+          <View style={styles.privacyRow}>
+            <View style={styles.privacyText}>
+              <Text style={styles.privacyTitle}>Compartir datos de uso</Text>
+              <Text style={styles.privacySub}>
+                Eventos anónimos de producto (sin emails ni notas).
+              </Text>
+            </View>
+            <Switch
+              value={compartirUso}
+              onValueChange={(value) => {
+                setCompartirUso(value);
+                void setAnalyticsConsent(value);
+              }}
+            />
+          </View>
+        </SurfaceCard>
+
         <SectionHeader title="Desafíos finalizados" />
         {finalizados.length === 0 ? (
           <Text style={styles.empty}>Todavía no tenés desafíos finalizados.</Text>
@@ -404,6 +433,24 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
   },
   finishedSub: {
+    ...typography.footnote,
+    color: lightColors.labelSecondary,
+  },
+  privacyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.lg,
+  },
+  privacyText: {
+    flex: 1,
+    gap: 4,
+  },
+  privacyTitle: {
+    ...typography.headline,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  privacySub: {
     ...typography.footnote,
     color: lightColors.labelSecondary,
   },

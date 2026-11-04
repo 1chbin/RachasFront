@@ -12,7 +12,8 @@ import { firebaseAuth } from '@/services/auth/firebaseApp';
 import { signOutFirebase } from '@/services/auth/googleSignIn';
 import { router } from 'expo-router';
 import { obtenerMe } from '@/services/api/usuarios';
-import { setApiUnauthorizedHandler } from '@/services/api/client';
+import { setApiUnauthorizedHandler, setApiUpgradeRequiredHandler } from '@/services/api/client';
+import { track, flushAnalyticsQueue } from '@/services/analytics/track';
 import { disconnectSocket } from '@/services/realtime/socketClient';
 import type { Usuario } from '@/types/api';
 
@@ -40,6 +41,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const cargarPerfil = useCallback(async () => {
     const data = await obtenerMe();
     setUsuario(data);
+    await track('ingreso_exitoso', { requiere_alias: Boolean(data.requiereAlias) });
+    await flushAnalyticsQueue().catch(() => undefined);
   }, []);
 
   const refrescarUsuario = useCallback(async () => {
@@ -49,6 +52,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const cerrarSesion = useCallback(async () => {
     await limpiarSesion();
   }, [limpiarSesion]);
+
+  useEffect(() => {
+    setApiUpgradeRequiredHandler(() => {
+      router.replace('/actualizar');
+    });
+    return () => setApiUpgradeRequiredHandler(null);
+  }, []);
 
   useEffect(() => {
     setApiUnauthorizedHandler(() => {

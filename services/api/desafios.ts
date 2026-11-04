@@ -28,7 +28,7 @@ export function crearDesafio(body: {
   descripcion?: string;
   categoria: string;
   fechaInicio: string;
-  fechaFin: string;
+  finalizaEn: string;
   maxParticipantes?: number;
 }) {
   return apiRequest<DesafioResumen>('/desafios', {

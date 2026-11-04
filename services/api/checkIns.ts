@@ -3,7 +3,12 @@ import type { CheckIn, Paginated } from '@/types/api';
 
 export function registrarCheckIn(
   desafioId: string,
-  body: { dia: string; nota?: string; valor?: number },
+  body: {
+    dia: string;
+    zonaHoraria: string;
+    nota?: string;
+    valor?: number;
+  },
 ) {
   return apiRequest<CheckIn>(`/desafios/${desafioId}/check-ins`, {
     method: 'POST',
