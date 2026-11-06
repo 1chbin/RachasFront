@@ -34,6 +34,7 @@ import {
 } from '@/lib/categorias';
 import { hoyCalendario } from '@/lib/fechas';
 import { mensajeErrorAmigable } from '@/lib/errors';
+import { track } from '@/services/analytics/track';
 import { listarDesafios, listarParticipantes, unirseDesafio } from '@/services/api/desafios';
 import { lightColors } from '@/theme/light';
 import { spacing } from '@/theme/spacing';
@@ -130,6 +131,7 @@ export default function ExplorarScreen() {
     setUniendo(true);
     try {
       const res = await unirseDesafio(codigo.trim().toUpperCase());
+      await track('desafio_unido', { desafio_id: res.desafio.id });
       setModalCodigo(false);
       setCodigo('');
       await refrescarSuscripcionesAliento();

@@ -38,7 +38,6 @@ export default function RootLayout() {
             <DevBackReachabilityBanner />
             <RecommendedUpdateBanner />
             <Stack
-              style={{ flex: 1 }}
               screenOptions={{
               headerStyle: { backgroundColor: lightColors.background },
               headerTintColor: lightColors.primary,

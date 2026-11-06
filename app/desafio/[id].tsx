@@ -139,7 +139,7 @@ export default function DesafioDetalleScreen() {
       try {
         const [d, r, ra, historial] = await Promise.all([
           obtenerDesafio(id),
-          obtenerRanking(id).catch(() => ({ ranking: [] as FilaRanking[] })),
+          obtenerRanking(id).catch((): null => null),
           obtenerRacha(id).catch(() => ({ rachaActual: 0, mejorRacha: 0 })),
           usuarioId
             ? listarCheckIns(id, 1, 20).catch(() => ({
@@ -148,7 +148,12 @@ export default function DesafioDetalleScreen() {
             : Promise.resolve({ data: [] as CheckIn[] }),
         ]);
         setDesafio(d);
-        setRanking(r.ranking ?? []);
+        if (r) {
+          setRanking(r.ranking ?? []);
+          void track('ranking_consultado', { desafio_id: id });
+        } else {
+          setRanking([]);
+        }
         setRacha(ra);
         setCheckIns(historial.data ?? []);
         await listarParticipantes(id).catch(() => undefined);
@@ -262,6 +267,13 @@ export default function DesafioDetalleScreen() {
       setValor('');
       const ra = await obtenerRacha(id).catch(() => ({ rachaActual: antes, mejorRacha: 0 }));
       setRacha(ra);
+      if (antes > 0 && ra.rachaActual < antes) {
+        await track('racha_perdida', {
+          desafio_id: id,
+          racha_anterior: antes,
+          racha_nueva: ra.rachaActual,
+        });
+      }
       await cargar(true);
       if (ra.rachaActual > antes) {
         setBurst({ visible: true, from: antes, to: ra.rachaActual });

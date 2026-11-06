@@ -17,6 +17,10 @@ export type RecommendedUpdateBannerState = {
 export function useRecommendedUpdateBanner(): RecommendedUpdateBannerState {
   const [visible, setVisible] = useState(false);
   const [recommended, setRecommended] = useState<string | null>(null);
+  const [policyForTrack, setPolicyForTrack] = useState<{
+    min: string;
+    recommended: string;
+  } | null>(null);
   const trackedRef = useRef(false);
 
   useEffect(() => {
@@ -36,6 +40,7 @@ export function useRecommendedUpdateBanner(): RecommendedUpdateBannerState {
         if (!belowRecommended || !atOrAboveMin) {
           setVisible(false);
           setRecommended(null);
+          setPolicyForTrack(null);
           return;
         }
 
@@ -48,15 +53,18 @@ export function useRecommendedUpdateBanner(): RecommendedUpdateBannerState {
         if (dismissed === 'true') {
           setVisible(false);
           setRecommended(policy.recommended);
+          setPolicyForTrack(null);
           return;
         }
 
         setRecommended(policy.recommended);
+        setPolicyForTrack({ min: policy.min, recommended: policy.recommended });
         setVisible(true);
       } catch {
         if (!cancelled) {
           setVisible(false);
           setRecommended(null);
+          setPolicyForTrack(null);
         }
       }
     })();
@@ -67,12 +75,16 @@ export function useRecommendedUpdateBanner(): RecommendedUpdateBannerState {
   }, []);
 
   useEffect(() => {
-    if (!visible || !recommended || trackedRef.current) {
+    if (!visible || !recommended || !policyForTrack || trackedRef.current) {
       return;
     }
     trackedRef.current = true;
-    void track('aviso_actualizacion_mostrado', { recommended });
-  }, [visible, recommended]);
+    void track('aviso_actualizacion_mostrado', {
+      min: policyForTrack.min,
+      recommended: policyForTrack.recommended,
+      app_version: getAppVersion(),
+    });
+  }, [visible, recommended, policyForTrack]);
 
   const dismiss = useCallback(async () => {
     if (recommended) {
