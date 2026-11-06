@@ -7,6 +7,7 @@ import { SessionProvider } from '@/context/SessionContext';
 import { AlientoNotificationsProvider } from '@/context/AlientoNotificationsContext';
 import { AppErrorBoundary } from '@/components/system/AppErrorBoundary';
 import { DevBackReachabilityBanner } from '@/components/system/DevBackReachabilityBanner';
+import { RecommendedUpdateBanner } from '@/components/system/RecommendedUpdateBanner';
 import { lightColors } from '@/theme/light';
 import { View } from 'react-native';
 
@@ -35,6 +36,7 @@ export default function RootLayout() {
         <AlientoNotificationsProvider>
           <View style={{ flex: 1 }}>
             <DevBackReachabilityBanner />
+            <RecommendedUpdateBanner />
             <Stack
               style={{ flex: 1 }}
               screenOptions={{
