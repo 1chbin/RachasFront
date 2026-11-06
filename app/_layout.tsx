@@ -10,6 +10,7 @@ import { DevBackReachabilityBanner } from '@/components/system/DevBackReachabili
 import { RecommendedUpdateBanner } from '@/components/system/RecommendedUpdateBanner';
 import { lightColors } from '@/theme/light';
 import { View } from 'react-native';
+import { installGlobalErrorHandlers } from '@/services/monitoring/installGlobalErrorHandlers';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -29,6 +30,10 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded, error]);
+
+  useEffect(() => {
+    installGlobalErrorHandlers();
+  }, []);
 
   return (
     <AppErrorBoundary pantalla="root">

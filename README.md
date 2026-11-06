@@ -67,6 +67,14 @@ Probado en desarrollo con **emulador Android** (Windows).
 
 - `app/` — rutas (ingreso, tabs, detalle de desafío)
 - `services/api/` — cliente HTTP con `Authorization: Bearer` (Firebase ID token)
+
+### Monitoreo y `requestId` (Parte IV)
+
+Cada llamada a la API genera un **UUID** en `x-request-id` (ver `services/api/client.ts`). El back escribe una línea JSON por pedido con ese mismo id (`HttpRequest` en RachasBack).
+
+- Si ves un fallo después de una petición, buscá en los logs del servidor el **mismo** `requestId`.
+- Errores capturados por el **error boundary** o por el **manejador global** (`installGlobalErrorHandlers`) se envían a `POST /v2/analytics/client-errors` con `requestId` cuando hubo un fetch reciente.
+- La pantalla de fallback del boundary puede mostrar **Referencia (request): …** para reportes o capturas.
 - `services/realtime/` — Socket.IO (`EXPO_PUBLIC_WS_URL`, mismo host que la API por defecto)
 - `services/auth/` — Firebase Auth (email/contraseña; Google en web vía popup)
 - `theme/` — paleta Modern Violet (modo claro)

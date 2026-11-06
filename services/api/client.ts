@@ -22,6 +22,13 @@ type RequestOptions = {
 let onUnauthorized: (() => void) | null = null;
 let onUpgradeRequired: (() => void) | null = null;
 
+/** Último `x-request-id` enviado en un fetch API (para correlación con logs del servidor). */
+let lastRequestId: string | undefined;
+
+export function getLastRequestId(): string | undefined {
+  return lastRequestId;
+}
+
 export function setApiUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorized = handler;
 }
@@ -51,6 +58,7 @@ async function fetchWithAuth<T>(
 ): Promise<T> {
   const { method = 'GET', body, auth = false } = options;
   const requestId = Crypto.randomUUID();
+  lastRequestId = requestId;
   const headers: Record<string, string> = {
     Accept: 'application/json',
     'x-request-id': requestId,

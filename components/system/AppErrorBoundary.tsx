@@ -1,7 +1,7 @@
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { reportarErrorCliente } from '@/services/api/clientErrors';
-import { getAppVersion } from '@/services/api/client';
+import { getAppVersion, getLastRequestId } from '@/services/api/client';
 import { lightColors } from '@/theme/light';
 import { typography } from '@/theme/typography';
 
@@ -19,16 +19,19 @@ export class AppErrorBoundary extends Component<Props, State> {
     void reportarErrorCliente({
       mensaje: `${error.message}\n${info.componentStack ?? ''}`.slice(0, 1900),
       pantalla: this.props.pantalla ?? 'root',
+      requestId: getLastRequestId(),
     }).catch(() => undefined);
   }
 
   render() {
     if (this.state.error) {
+      const refId = getLastRequestId();
       return (
         <View style={styles.wrap}>
           <Text style={styles.title}>Algo salió mal</Text>
           <Text style={styles.body}>
             Reiniciá la app. Versión {getAppVersion()}.
+            {refId ? `\n\nReferencia (request): ${refId}` : ''}
           </Text>
         </View>
       );
