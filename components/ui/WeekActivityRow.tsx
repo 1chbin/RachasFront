@@ -1,11 +1,12 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { lightColors } from '@/theme/light';
 import { typography } from '@/theme/typography';
 
 const DAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 const DOT_SIZE_DEFAULT = 28;
-const DOT_SIZE_GLASS = 32;
+const DOT_SIZE_GLASS = 30;
 
 type WeekActivityRowProps = {
   activeDays: boolean[];
@@ -26,8 +27,7 @@ export function WeekActivityRow({
     <View style={styles.row}>
       {DAY_LABELS.map((label, index) => {
         const active = days[index];
-        const isTodayPending =
-          onGlass && todayIndex === index && !active;
+        const isTodayPending = onGlass && todayIndex === index && !active;
         return (
           <View key={label} style={styles.cell}>
             <View
@@ -36,19 +36,23 @@ export function WeekActivityRow({
                 { width: dotSize, height: dotSize, borderRadius: dotSize / 2 },
                 onGlass && styles.dotGlass,
                 onGlass && active && styles.dotGlassActive,
+                onGlass && isTodayPending && styles.dotGlassPending,
                 !onGlass && active && styles.dotActive,
               ]}>
               {active ? (
-                <Text
-                  style={[
-                    styles.check,
-                    onGlass && styles.checkGlassActive,
-                    !onGlass && styles.checkDefaultActive,
-                  ]}>
-                  ✓
-                </Text>
+                onGlass ? (
+                  <Ionicons
+                    name="checkmark"
+                    size={22}
+                    color={lightColors.primaryForeground}
+                    style={styles.checkIconGlass}
+                  />
+                ) : (
+                  <Text style={[styles.check, styles.checkDefaultActive]}>✓</Text>
+                )
               ) : isTodayPending ? (
-                <Text style={styles.checkPending}>✓</Text>
+                // Solo borde (dotGlassPending): un ícono circular dentro se veía como "doble aro" roto.
+                null
               ) : null}
             </View>
             <Text style={[styles.label, onGlass && styles.labelGlass]}>{label}</Text>
@@ -68,6 +72,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     flex: 1,
+    minWidth: 0,
   },
   dot: {
     backgroundColor: 'rgba(255,255,255,0.75)',
@@ -86,7 +91,26 @@ const styles = StyleSheet.create({
   },
   dotGlassActive: {
     backgroundColor: lightColors.primary,
+    borderColor: 'rgba(255,255,255,0.92)',
+    borderWidth: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#5B21B6',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.35,
+        shadowRadius: 4,
+      },
+      android: { elevation: 4 },
+      default: {},
+    }),
+  },
+  dotGlassPending: {
+    backgroundColor: 'rgba(255,255,255,0.98)',
     borderColor: lightColors.primary,
+    borderWidth: 2.5,
+  },
+  checkIconGlass: {
+    marginTop: 1,
   },
   check: {
     fontFamily: 'Inter_700Bold',
@@ -94,15 +118,6 @@ const styles = StyleSheet.create({
   checkDefaultActive: {
     fontSize: 13,
     color: lightColors.primaryForeground,
-  },
-  checkGlassActive: {
-    fontSize: 16,
-    color: lightColors.primaryForeground,
-  },
-  checkPending: {
-    fontSize: 16,
-    fontFamily: 'Inter_700Bold',
-    color: 'rgba(124, 58, 237, 0.28)',
   },
   label: {
     ...typography.caption,

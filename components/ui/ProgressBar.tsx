@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -11,9 +11,10 @@ import { radius } from '@/theme/spacing';
 type ProgressBarProps = {
   progress: number;
   height?: number;
+  style?: StyleProp<ViewStyle>;
 };
 
-export function ProgressBar({ progress, height = 8 }: ProgressBarProps) {
+export function ProgressBar({ progress, height = 8, style }: ProgressBarProps) {
   const clamped = Math.min(1, Math.max(0, progress));
   const width = useSharedValue(clamped);
 
@@ -26,7 +27,7 @@ export function ProgressBar({ progress, height = 8 }: ProgressBarProps) {
   }));
 
   return (
-    <View style={[styles.track, { height, borderRadius: height / 2 }]}>
+    <View style={[styles.track, { height, borderRadius: height / 2 }, style]}>
       <Animated.View
         style={[
           styles.fill,
@@ -42,7 +43,8 @@ const styles = StyleSheet.create({
   track: {
     backgroundColor: lightColors.progressTrack,
     overflow: 'hidden',
-    width: '100%',
+    flexGrow: 1,
+    minWidth: 0,
   },
   fill: {
     backgroundColor: lightColors.primary,

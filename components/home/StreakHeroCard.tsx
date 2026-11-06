@@ -219,6 +219,6 @@ const styles = StyleSheet.create({
   },
   weekPanelContent: {
     paddingVertical: 18,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
   },
 });

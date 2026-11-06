@@ -1,4 +1,4 @@
-import { ErrorUtils } from 'react-native';
+import { ErrorUtils, Platform } from 'react-native';
 import { getLastRequestId } from '@/services/api/client';
 import { reportarErrorCliente } from '@/services/api/clientErrors';
 
@@ -41,9 +41,17 @@ export function installGlobalErrorHandlers(): void {
     });
   }
 
-  if (typeof window === 'undefined') {
+  // En iOS/Android a veces existe `window` (polyfill) pero sin `addEventListener`.
+  if (
+    Platform.OS !== 'web' ||
+    typeof globalThis.addEventListener !== 'function'
+  ) {
     return;
   }
+
+  const root = globalThis as typeof globalThis & {
+    addEventListener: Window['addEventListener'];
+  };
 
   const onUnhandledRejection = (event: PromiseRejectionEvent) => {
     const reason = event.reason;
@@ -75,6 +83,6 @@ export function installGlobalErrorHandlers(): void {
     }).catch(() => undefined);
   };
 
-  window.addEventListener('unhandledrejection', onUnhandledRejection);
-  window.addEventListener('error', onWindowError);
+  root.addEventListener('unhandledrejection', onUnhandledRejection);
+  root.addEventListener('error', onWindowError);
 }

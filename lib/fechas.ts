@@ -97,6 +97,23 @@ function pluralDias(n: number): string {
   return n === 1 ? '1 día' : `${n} días`;
 }
 
+function esFechaCalendarioValida(value: string): boolean {
+  const s = value?.trim() ?? '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    return false;
+  }
+  const t = new Date(`${s}T12:00:00`).getTime();
+  return !Number.isNaN(t);
+}
+
+function rangoDesafioValido(fechaInicio: string, fechaFin: string): boolean {
+  return (
+    esFechaCalendarioValida(fechaInicio) &&
+    esFechaCalendarioValida(fechaFin) &&
+    fechaFin.trim() >= fechaInicio.trim()
+  );
+}
+
 export function textoTiempoDesafio(
   estado: EstadoDesafio,
   fechaInicio: string,
@@ -106,14 +123,31 @@ export function textoTiempoDesafio(
   if (estado === 'FINALIZADO') return 'Finalizado';
   if (estado === 'CANCELADO') return 'Cancelado';
 
+  if (!esFechaCalendarioValida(hoy)) {
+    return 'Fechas no disponibles';
+  }
+
   if (estado === 'PROGRAMADO') {
+    if (!esFechaCalendarioValida(fechaInicio)) {
+      return 'Fechas no disponibles';
+    }
     const hastaInicio = diferenciaDiasCalendario(hoy, fechaInicio);
+    if (Number.isNaN(hastaInicio)) {
+      return 'Fechas no disponibles';
+    }
     if (hastaInicio <= 0) return 'Empieza hoy';
     if (hastaInicio === 1) return 'Empieza mañana';
     return `Empieza en ${pluralDias(hastaInicio)}`;
   }
 
+  if (!rangoDesafioValido(fechaInicio, fechaFin)) {
+    return 'Fechas no disponibles';
+  }
+
   const restantes = diferenciaDiasCalendario(hoy, fechaFin);
+  if (Number.isNaN(restantes)) {
+    return 'Fechas no disponibles';
+  }
   if (restantes < 0) return 'Plazo vencido';
   if (restantes === 0) return 'Termina hoy';
   if (restantes === 1) return 'Último día';
@@ -125,8 +159,12 @@ export function progresoDesafio(
   fechaFin: string,
   hoy: string,
 ): number {
+  if (!rangoDesafioValido(fechaInicio, fechaFin) || !esFechaCalendarioValida(hoy)) {
+    return 0;
+  }
   const total = diferenciaDiasCalendario(fechaInicio, fechaFin);
-  if (total <= 0) return 1;
+  if (total <= 0 || Number.isNaN(total)) return 1;
   const transcurrido = diferenciaDiasCalendario(fechaInicio, hoy);
+  if (Number.isNaN(transcurrido)) return 0;
   return Math.min(1, Math.max(0, transcurrido / total));
 }

@@ -23,6 +23,16 @@ type ChallengeHomeCardProps = {
   checkInLoading?: boolean;
 };
 
+function fechasDesafioValidas(inicio: string, fin: string): boolean {
+  return Boolean(
+    inicio?.trim() &&
+      fin?.trim() &&
+      /^\d{4}-\d{2}-\d{2}$/.test(inicio.trim()) &&
+      /^\d{4}-\d{2}-\d{2}$/.test(fin.trim()) &&
+      fin >= inicio,
+  );
+}
+
 export function ChallengeHomeCard({
   item,
   zonaHoraria,
@@ -33,11 +43,16 @@ export function ChallengeHomeCard({
   const { desafio } = item;
   const meta = metaCategoria(desafio.categoria);
   const hoy = hoyCalendario(zonaHoraria);
-  const totalDias = diasInclusiveCalendario(desafio.fechaInicio, desafio.finalizaEn);
-  const transcurridos = Math.min(
-    totalDias,
-    Math.max(0, diferenciaDiasCalendario(desafio.fechaInicio, hoy) + 1),
-  );
+  const inicio = desafio.fechaInicio?.trim() ?? '';
+  const fin = desafio.finalizaEn?.trim() ?? '';
+  const rangook = fechasDesafioValidas(inicio, fin);
+  const totalDias = rangook ? diasInclusiveCalendario(inicio, fin) : 1;
+  const rawTranscurridos = rangook
+    ? diferenciaDiasCalendario(inicio, hoy) + 1
+    : 0;
+  const transcurridos = rangook
+    ? Math.min(totalDias, Math.max(0, rawTranscurridos))
+    : 0;
   const progress = totalDias > 0 ? transcurridos / totalDias : 0;
   const showCheckIn = desafio.estado === 'ACTIVO' && !item.checkInHoy;
   const showDone = item.checkInHoy;
@@ -54,15 +69,17 @@ export function ChallengeHomeCard({
               <Text style={styles.title} numberOfLines={2}>
                 {desafio.nombre}
               </Text>
-              <BadgeEstado estado={desafio.estado} />
+              <View style={styles.badgeWrap}>
+                <BadgeEstado estado={desafio.estado} />
+              </View>
             </View>
             <Text style={styles.categoria}>{meta.label}</Text>
           </View>
         </View>
         <View style={styles.progressRow}>
-          <ProgressBar progress={progress} height={12} />
-          <Text style={styles.fraction}>
-            {transcurridos}/{totalDias}
+          <ProgressBar progress={progress} height={12} style={styles.progressBar} />
+          <Text style={styles.fraction} numberOfLines={1}>
+            {rangook ? `${transcurridos}/${totalDias}` : '—'}
           </Text>
         </View>
       </Pressable>
@@ -106,6 +123,7 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
+    minWidth: 0,
     gap: 4,
     paddingTop: 2,
   },
@@ -114,9 +132,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.sm,
   },
+  badgeWrap: {
+    flexShrink: 0,
+    maxWidth: '42%',
+  },
   title: {
     ...typography.headline,
     flex: 1,
+    minWidth: 0,
     fontFamily: 'Inter_700Bold',
   },
   categoria: {
@@ -127,12 +150,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    minWidth: 0,
+  },
+  progressBar: {
+    flex: 1,
+    minWidth: 0,
   },
   fraction: {
     ...typography.footnote,
     fontFamily: 'Inter_600SemiBold',
     color: lightColors.primary,
-    minWidth: 40,
+    flexShrink: 0,
+    minWidth: 44,
+    maxWidth: 72,
     textAlign: 'right',
   },
   actionZone: {

@@ -1,21 +1,23 @@
-import { ReactNode, useEffect, useState } from 'react';
+import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetScrollView,
+  BottomSheetView,
+} from '@gorhom/bottom-sheet';
+import {
+  ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import {
   Dimensions,
-  KeyboardAvoidingView,
-  Modal,
-  PanResponder,
-  Platform,
-  Pressable,
-  ScrollView,
   StyleSheet,
   View,
+  useWindowDimensions,
 } from 'react-native';
-import Animated, {
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { lightColors } from '@/theme/light';
 import { radius, spacing } from '@/theme/spacing';
@@ -32,13 +34,10 @@ type BottomSheetProps = {
   overlay?: ReactNode;
 };
 
-const WINDOW_HEIGHT = Dimensions.get('window').height;
-
-const SIZE_MAX: Record<BottomSheetSize, number> = {
-  compact: WINDOW_HEIGHT * 0.42,
-  tall: WINDOW_HEIGHT * 0.92,
-};
-
+/**
+ * Bottom sheet nativo con @gorhom/bottom-sheet: el panel sigue el dedo y coordina scroll.
+ * En web usa [`BottomSheet.web.tsx`](./BottomSheet.web.tsx).
+ */
 export function BottomSheet({
   visible,
   onClose,
@@ -48,171 +47,119 @@ export function BottomSheet({
   children,
   overlay,
 }: BottomSheetProps) {
+  const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const [mounted, setMounted] = useState(visible);
-  const backdropOpacity = useSharedValue(0);
-  const sheetTranslateY = useSharedValue(400);
+  const ref = useRef<BottomSheetModal>(null);
 
-  const finishClose = () => {
-    setMounted(false);
-    onClose();
-  };
+  const snapPoints = useMemo(() => {
+    const ratio = size === 'compact' ? 0.42 : 0.92;
+    // En el primer frame iOS a veces devuelve height 0; Gorhom con snap 0 no muestra el sheet.
+    const h =
+      windowHeight > 1
+        ? windowHeight
+        : Dimensions.get('window').height;
+    const raw = Math.round(Math.max(h, 320) * ratio);
+    return [Math.max(raw, size === 'compact' ? 280 : 400)];
+  }, [windowHeight, size]);
 
-  const animateOpen = () => {
-    backdropOpacity.value = withTiming(1, { duration: 220 });
-    sheetTranslateY.value = withTiming(0, { duration: 280 });
-  };
+  const bottomInset = Math.max(insets.bottom, spacing.lg);
 
-  const animateClose = () => {
-    backdropOpacity.value = withTiming(0, { duration: 180 });
-    sheetTranslateY.value = withTiming(400, { duration: 240 }, (finished) => {
-      if (finished) {
-        runOnJS(finishClose)();
-      }
-    });
-  };
-
-  useEffect(() => {
-    if (visible) {
-      setMounted(true);
-      requestAnimationFrame(() => animateOpen());
-    } else if (mounted) {
-      animateClose();
-    }
-  }, [visible, mounted]);
-
-  const panResponder = PanResponder.create({
-    onMoveShouldSetPanResponder: (_, gesture) =>
-      gesture.dy > 8 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
-    onPanResponderRelease: (_, gesture) => {
-      if (gesture.dy > 48 || gesture.vy > 0.8) {
-        animateClose();
-      }
-    },
-  });
-
-  const backdropStyle = useAnimatedStyle(() => ({
-    opacity: backdropOpacity.value * 0.45,
-  }));
-
-  const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: sheetTranslateY.value }],
-  }));
-
-  if (!mounted) return null;
-
-  const body = scroll ? (
-    <ScrollView
-      keyboardShouldPersistTaps="handled"
-      nestedScrollEnabled
-      showsVerticalScrollIndicator={false}
-      style={styles.scroll}
-      contentContainerStyle={styles.scrollContent}>
-      {children}
-    </ScrollView>
-  ) : (
-    <View style={[styles.scrollContent, styles.scroll]}>{children}</View>
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.45}
+        pressBehavior="close"
+      />
+    ),
+    [],
   );
 
-  return (
-    <Modal
-      visible
-      transparent
-      animationType="none"
-      statusBarTranslucent
-      presentationStyle="overFullScreen"
-      onRequestClose={animateClose}>
-      <View style={styles.root}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={animateClose}>
-          <Animated.View style={[styles.backdrop, backdropStyle]} />
-        </Pressable>
+  useEffect(() => {
+    if (!visible) {
+      ref.current?.dismiss();
+      return;
+    }
+    // BottomSheetModal arranca en index -1; present() en el siguiente frame (RN sin InteractionManager).
+    const raf = requestAnimationFrame(() => {
+      ref.current?.present();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [visible]);
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.keyboard}
-          pointerEvents="box-none">
-          <Animated.View
-            style={[
-              styles.sheet,
-              size === 'tall' && styles.sheetTall,
-              {
-                maxHeight: SIZE_MAX[size],
-                paddingBottom: Math.max(insets.bottom, spacing.lg),
-              },
-              sheetStyle,
-            ]}>
-            <View
-              style={styles.handleZone}
-              accessibilityRole="adjustable"
-              accessibilityHint="Deslizá hacia abajo para cerrar"
-              {...panResponder.panHandlers}>
-              <View style={styles.handle} />
-            </View>
-            {header ? <View style={styles.headerSlot}>{header}</View> : null}
-            {body}
-          </Animated.View>
-        </KeyboardAvoidingView>
-        {overlay ? (
-          <View style={styles.overlayHost} pointerEvents="box-none">
-            {overlay}
-          </View>
-        ) : null}
-      </View>
-    </Modal>
+  const handleDismiss = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  return (
+    <BottomSheetModal
+      ref={ref}
+      index={0}
+      snapPoints={snapPoints}
+      enablePanDownToClose
+      enableDynamicSizing={false}
+      onDismiss={handleDismiss}
+      backdropComponent={renderBackdrop}
+      topInset={insets.top}
+      bottomInset={bottomInset}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
+      backgroundStyle={styles.sheetBg}
+      handleIndicatorStyle={styles.handleIndicator}
+      enableContentPanningGesture>
+      {header ? <View style={styles.headerSlot}>{header}</View> : null}
+      {scroll ? (
+        <BottomSheetScrollView
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: bottomInset },
+          ]}>
+          {children}
+        </BottomSheetScrollView>
+      ) : (
+        <BottomSheetView
+          style={[styles.noScrollBody, { paddingBottom: bottomInset }]}>
+          {children}
+        </BottomSheetView>
+      )}
+      {overlay ? (
+        <View style={styles.overlayHost} pointerEvents="box-none">
+          {overlay}
+        </View>
+      ) : null}
+    </BottomSheetModal>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: '#000',
-  },
-  keyboard: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    width: '100%',
+  sheetBg: {
     backgroundColor: lightColors.surface,
     borderTopLeftRadius: radius.sheet,
     borderTopRightRadius: radius.sheet,
-    overflow: 'hidden',
   },
-  sheetTall: {
-    flexShrink: 1,
-    minHeight: WINDOW_HEIGHT * 0.5,
-  },
-  handleZone: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-    paddingTop: spacing.sm,
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
+  handleIndicator: {
     backgroundColor: lightColors.separator,
+    width: 36,
   },
   headerSlot: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
   },
-  scroll: {
-    flexGrow: 1,
-    flexShrink: 1,
-  },
   scrollContent: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
+  },
+  noScrollBody: {
+    flex: 1,
+    paddingHorizontal: spacing.lg,
   },
   overlayHost: {
     ...StyleSheet.absoluteFill,
-    zIndex: 20,
-    elevation: 20,
+    zIndex: 100,
+    elevation: 100,
   },
 });

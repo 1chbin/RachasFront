@@ -1,3 +1,5 @@
+import 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Inter_400Regular, Inter_600SemiBold, Inter_700Bold, useFonts } from '@expo-google-fonts/inter';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -10,6 +12,7 @@ import { DevBackReachabilityBanner } from '@/components/system/DevBackReachabili
 import { RecommendedUpdateBanner } from '@/components/system/RecommendedUpdateBanner';
 import { lightColors } from '@/theme/light';
 import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { installGlobalErrorHandlers } from '@/services/monitoring/installGlobalErrorHandlers';
 
 SplashScreen.preventAutoHideAsync();
@@ -36,30 +39,34 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <AppErrorBoundary pantalla="root">
-      <SessionProvider>
-        <AlientoNotificationsProvider>
-          <View style={{ flex: 1 }}>
-            <DevBackReachabilityBanner />
-            <RecommendedUpdateBanner />
-            <Stack
-              screenOptions={{
-              headerStyle: { backgroundColor: lightColors.background },
-              headerTintColor: lightColors.primary,
-              contentStyle: { backgroundColor: lightColors.background },
-            }}>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="desafio" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="actualizar"
-              options={{ title: 'Actualizar', headerShown: true }}
-            />
-          </Stack>
-          </View>
-        </AlientoNotificationsProvider>
-      </SessionProvider>
-    </AppErrorBoundary>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <BottomSheetModalProvider>
+        <AppErrorBoundary pantalla="root">
+          <SessionProvider>
+            <AlientoNotificationsProvider>
+              <View style={{ flex: 1 }}>
+                <DevBackReachabilityBanner />
+                <RecommendedUpdateBanner />
+                <Stack
+                  screenOptions={{
+                    headerStyle: { backgroundColor: lightColors.background },
+                    headerTintColor: lightColors.primary,
+                    contentStyle: { backgroundColor: lightColors.background },
+                  }}>
+                  <Stack.Screen name="index" options={{ headerShown: false }} />
+                  <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="desafio" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="actualizar"
+                    options={{ title: 'Actualizar', headerShown: true }}
+                  />
+                </Stack>
+              </View>
+            </AlientoNotificationsProvider>
+          </SessionProvider>
+        </AppErrorBoundary>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
   );
 }

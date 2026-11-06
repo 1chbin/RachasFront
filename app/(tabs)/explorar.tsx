@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +17,6 @@ import { router, useFocusEffect } from 'expo-router';
 import { ChallengeExploreCard } from '@/components/desafio/ChallengeExploreCard';
 import { CategoriaIcon } from '@/components/desafio/CategoriaIcon';
 import { AppHeader } from '@/components/ui/AppHeader';
-import { BottomSheet } from '@/components/ui/BottomSheet';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { FilterChips } from '@/components/ui/FilterChips';
@@ -165,14 +168,19 @@ export default function ExplorarScreen() {
 
   if (loading && items.length === 0) return <LoadingView />;
 
-  const header = (
+  /** Fuera del FlatList: en iOS el toque dentro de ListHeader + RefreshControl a veces no abre el modal. */
+  const explorarSuperior = (
     <View style={styles.header}>
       <AppHeader title="Explorar" showLogo={false} />
       <SearchField value={busqueda} onChangeText={setBusqueda} />
       <FilterChips options={categoriaOptions} value={categoria} onChange={setCategoria} />
       <FilterChips options={estadoOptions} value={estado} onChange={setEstado} />
 
-      <Pressable onPress={() => setModalCodigo(true)}>
+      <TouchableOpacity
+        activeOpacity={0.75}
+        accessibilityRole="button"
+        accessibilityLabel="Unirse con código de invitación"
+        onPress={() => setModalCodigo(true)}>
         <SurfaceCard style={styles.joinCard}>
           <View style={styles.joinRow}>
             <View style={styles.joinIcon}>
@@ -185,61 +193,82 @@ export default function ExplorarScreen() {
             <Ionicons name="chevron-forward" size={20} color={lightColors.muted} />
           </View>
         </SurfaceCard>
-      </Pressable>
+      </TouchableOpacity>
 
       {error ? <ErrorState message={error} onRetry={cargar} /> : null}
-      {filtrados.length > 0 ? (
-        <SectionHeader title="Desafíos destacados" />
-      ) : null}
     </View>
   );
 
+  const listHeader =
+    filtrados.length > 0 ? (
+      <SectionHeader title="Desafíos destacados" />
+    ) : null;
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <FlatList
-        data={filtrados}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={header}
-        renderItem={({ item }) => (
-          <ChallengeExploreCard
-            desafio={item}
-            hoy={hoy}
-            participantAliases={participantsById[item.id]}
-            onPress={() => router.push(`/desafio/${item.id}`)}
-          />
-        )}
-        ListEmptyComponent={
-          !error && filtrados.length === 0 ? (
-            <EmptyState
-              title="Sin resultados"
-              message="Probá otros filtros o creá un desafío."
-            />
-          ) : undefined
-        }
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={cargar} />}
-        contentContainerStyle={styles.list}
-      />
-
-      <BottomSheet
-        visible={modalCodigo}
-        onClose={() => setModalCodigo(false)}
-        size="compact">
-        <Text style={styles.modalTitle}>Código de invitación</Text>
-        <Text style={styles.modalSubtitle}>Ingresá las 6 letras o números</Text>
-        <CodeSlots value={codigo} onChange={setCodigo} />
-        <View style={styles.modalActions}>
-          <GradientButton
-            label="Unirme"
-            onPress={unirse}
-            disabled={codigo.length < 6 || uniendo}
-          />
-          <PrimaryButton
-            label="Cancelar"
-            variant="secondary"
-            onPress={() => setModalCodigo(false)}
-          />
+      <View style={styles.body}>
+        <View style={styles.topZone} collapsable={false}>
+          {explorarSuperior}
         </View>
-      </BottomSheet>
+        <FlatList
+          style={styles.listFlex}
+          data={filtrados}
+          keyExtractor={(item) => item.id}
+          ListHeaderComponent={listHeader}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => (
+            <ChallengeExploreCard
+              desafio={item}
+              hoy={hoy}
+              participantAliases={participantsById[item.id]}
+              onPress={() => router.push(`/desafio/${item.id}`)}
+            />
+          )}
+          ListEmptyComponent={
+            !error && filtrados.length === 0 ? (
+              <EmptyState
+                title="Sin resultados"
+                message="Probá otros filtros o creá un desafío."
+              />
+            ) : undefined
+          }
+          refreshControl={<RefreshControl refreshing={loading} onRefresh={cargar} />}
+          contentContainerStyle={styles.list}
+        />
+      </View>
+
+      <Modal
+        visible={modalCodigo}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setModalCodigo(false)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalRoot}>
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => setModalCodigo(false)}
+            accessibilityLabel="Cerrar código de invitación"
+          />
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>Código de invitación</Text>
+            <Text style={styles.modalSubtitle}>Ingresá las 6 letras o números</Text>
+            <CodeSlots value={codigo} onChange={setCodigo} />
+            <View style={styles.modalActions}>
+              <GradientButton
+                label="Unirme"
+                onPress={unirse}
+                disabled={codigo.length < 6 || uniendo}
+              />
+              <PrimaryButton
+                label="Cancelar"
+                variant="secondary"
+                onPress={() => setModalCodigo(false)}
+              />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -248,6 +277,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: lightColors.background,
+  },
+  body: {
+    flex: 1,
+    minHeight: 0,
+  },
+  /** Evita que el FlatList (hermano posterior) se superponga y robe toques en iOS. */
+  topZone: {
+    flexShrink: 0,
+    zIndex: 2,
+  },
+  listFlex: {
+    flex: 1,
+    minHeight: 0,
+    zIndex: 1,
   },
   header: {
     paddingHorizontal: spacing.lg,
@@ -282,6 +325,22 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxl,
+  },
+  modalRoot: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  modalSheet: {
+    backgroundColor: lightColors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
   },
   modalTitle: {
