@@ -20,19 +20,26 @@ export function installGlobalErrorHandlers(): void {
   }
   installed = true;
 
-  const previous = ErrorUtils.getGlobalHandler();
+  // En web, `ErrorUtils` puede ser undefined o sin getGlobalHandler/setGlobalHandler.
+  const canUseRnGlobalHandler =
+    typeof ErrorUtils?.getGlobalHandler === 'function' &&
+    typeof ErrorUtils?.setGlobalHandler === 'function';
 
-  ErrorUtils.setGlobalHandler((error: Error, isFatal?: boolean) => {
-    void reportarErrorCliente({
-      mensaje: formatGlobalErrorMessage(error, Boolean(isFatal)),
-      pantalla: 'global',
-      requestId: getLastRequestId(),
-    }).catch(() => undefined);
+  if (canUseRnGlobalHandler && ErrorUtils) {
+    const previous = ErrorUtils.getGlobalHandler();
 
-    if (previous) {
-      previous(error, isFatal);
-    }
-  });
+    ErrorUtils.setGlobalHandler((error: Error, isFatal?: boolean) => {
+      void reportarErrorCliente({
+        mensaje: formatGlobalErrorMessage(error, Boolean(isFatal)),
+        pantalla: 'global',
+        requestId: getLastRequestId(),
+      }).catch(() => undefined);
+
+      if (previous) {
+        previous(error, isFatal);
+      }
+    });
+  }
 
   if (typeof window === 'undefined') {
     return;
